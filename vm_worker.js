@@ -58,9 +58,12 @@ async function _runVmJob({ injected, candidates, timeout, includeProtocol, hands
     });
 
     const t0 = Date.now();
+    const onRej = () => {};
+    process.on('unhandledRejection', onRej);
     try {
         sandboxApi.runScript(injected, { filename: 'zorr.js', timeout });
     } finally {
+        process.off('unhandledRejection', onRej);
         // P4: Restore prototype patches even if VM throws
         if (typeof sandboxApi.cleanup === 'function') {
             sandboxApi.cleanup();

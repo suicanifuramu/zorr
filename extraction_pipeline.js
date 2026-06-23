@@ -282,37 +282,61 @@ function _parseAndInject(source) {
 }
 
 /**
- * Scan the source AST for the protocol version by finding numeric literals
- * in the 420-460 range. This is a static fallback that works regardless of
- * VM execution path.
+ * Scan the source AST for the protocol version by finding the
+ * `$48(0, <var>)` pattern (setUint32 wrapper). This directly targets
+ * the handshake construction code path, not mere frequency.
  */
 function _scanSourceForVersion(source) {
-    const candidateNumbers = {};
     try {
         const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: 'script' });
-        const walk = (node) => {
+        // Build a map of variable name → literal numeric value
+        const varValues = new Map();
+        const collect = (node) => {
             if (!node || typeof node !== 'object') return;
-            if (Array.isArray(node)) { for (const x of node) walk(x); return; }
-            if (node.type === 'Literal' && typeof node.value === 'number'
-                && node.value >= 420 && node.value <= 460) {
-                const n = node.value;
-                candidateNumbers[n] = (candidateNumbers[n] || 0) + 1;
+            if (Array.isArray(node)) { for (const x of node) collect(x); return; }
+            if (node.type === 'VariableDeclarator'
+                && node.id && node.id.type === 'Identifier'
+                && node.init && node.init.type === 'Literal'
+                && typeof node.init.value === 'number') {
+                varValues.set(node.id.name, node.init.value);
             }
             for (const k of Object.keys(node)) {
                 if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
                     || k === 'range' || k === 'raw' || k === 'comments') continue;
-                walk(node[k]);
+                collect(node[k]);
             }
         };
-        walk(ast);
-    } catch (_) { /* ignore parse errors */ }
-    // Pick the most frequent number in the range
-    let best = null;
-    let bestCount = 0;
-    for (const [n, cnt] of Object.entries(candidateNumbers)) {
-        if (cnt > bestCount) { best = parseInt(n); bestCount = cnt; }
-    }
-    return best;
+        collect(ast);
+        // Find $48(0, <version>) — the setUint32 wrapper call.
+        // Also handles $48(dv, 0, <version>) by scanning all args.
+        let found = null;
+        const scan = (node) => {
+            if (found || !node || typeof node !== 'object') return;
+            if (Array.isArray(node)) { for (const x of node) scan(x); return; }
+            if (node.type === 'CallExpression'
+                && node.callee && node.callee.type === 'Identifier'
+                && node.callee.name === '$48'
+                && node.arguments.length >= 2) {
+                for (const arg of node.arguments) {
+                    if (arg.type === 'Literal' && typeof arg.value === 'number'
+                        && arg.value >= 420 && arg.value <= 460) {
+                        found = arg.value; return;
+                    }
+                    if (arg.type === 'Identifier' && varValues.has(arg.name)) {
+                        const v = varValues.get(arg.name);
+                        if (v >= 420 && v <= 460) { found = v; return; }
+                    }
+                }
+            }
+            for (const k of Object.keys(node)) {
+                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
+                    || k === 'range' || k === 'raw' || k === 'comments') continue;
+                scan(node[k]);
+            }
+        };
+        scan(ast);
+        return found;
+    } catch (_) { return null; }
 }
 
 /**
@@ -392,9 +416,15 @@ async function _runVmStage({ injected, candidates, timeout }) {
         });
 
         const t0 = Date.now();
+        // Suppress unhandled Promise rejections from the VM (the game
+        // code may create async operations that reject after the
+        // synchronous VM run has finished, e.g. tW.Cu internals).
+        const onRej = () => {};
+        process.on('unhandledRejection', onRej);
         try {
             sandboxApi.runScript(injected, { filename: 'zorr.js', timeout });
         } finally {
+            process.off('unhandledRejection', onRej);
             // P4: Restore prototype patches even if VM throws
             if (typeof sandboxApi.cleanup === 'function') {
                 sandboxApi.cleanup();
