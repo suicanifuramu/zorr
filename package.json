@@ -1,0 +1,22 @@
+{
+  "name": "zorr-websocket",
+  "version": "1.0.0",
+  "description": "Zorr game bot - WebSocket client, map server, and extraction pipeline",
+  "main": "map_server.js",
+  "scripts": {
+    "start": "node map_server.js",
+    "pathfind": "node pathfinding/server.js"
+  },
+  "dependencies": {
+    "acorn": "^8.14.0",
+    "canvas": "^2.11.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.0",
+    "pngjs": "^7.0.0",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "private": true
+}
