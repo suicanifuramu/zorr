@@ -793,7 +793,7 @@ class BotSession {
             mobList.sort((a,b) => a.dist - b.dist);
 
             // Tracking
-            if (this.trackingTargets.length > 0 && this.trackingWebhookUrl && this._AP.active) {
+            if (this.trackingTargets.length > 0 && this.trackingWebhookUrl && this._AP.active && !this._switching) {
                 for (const mob of mobList) {
                     for (const target of this.trackingTargets) {
                         if (mob.slug !== target.slug || target.enabled === false) continue;

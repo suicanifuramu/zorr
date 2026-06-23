@@ -2571,7 +2571,7 @@ function parseEntityUpdates(bytes) {
         mobList.sort((a, b) => a.dist - b.dist);
 
         // Check tracking targets against visible mobs (only notify during auto-patrol)
-        if (trackingTargets.length > 0 && trackingWebhookUrl && _AP.active) {
+        if (trackingTargets.length > 0 && trackingWebhookUrl && _AP.active && !_switching) {
             for (const mob of mobList) {
                 for (const target of trackingTargets) {
                     if (mob.slug !== target.slug) continue;
