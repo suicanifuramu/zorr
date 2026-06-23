@@ -282,6 +282,40 @@ function _parseAndInject(source) {
 }
 
 /**
+ * Scan the source AST for the protocol version by finding numeric literals
+ * in the 420-460 range. This is a static fallback that works regardless of
+ * VM execution path.
+ */
+function _scanSourceForVersion(source) {
+    const candidateNumbers = {};
+    try {
+        const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: 'script' });
+        const walk = (node) => {
+            if (!node || typeof node !== 'object') return;
+            if (Array.isArray(node)) { for (const x of node) walk(x); return; }
+            if (node.type === 'Literal' && typeof node.value === 'number'
+                && node.value >= 420 && node.value <= 460) {
+                const n = node.value;
+                candidateNumbers[n] = (candidateNumbers[n] || 0) + 1;
+            }
+            for (const k of Object.keys(node)) {
+                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
+                    || k === 'range' || k === 'raw' || k === 'comments') continue;
+                walk(node[k]);
+            }
+        };
+        walk(ast);
+    } catch (_) { /* ignore parse errors */ }
+    // Pick the most frequent number in the range
+    let best = null;
+    let bestCount = 0;
+    for (const [n, cnt] of Object.entries(candidateNumbers)) {
+        if (cnt > bestCount) { best = parseInt(n); bestCount = cnt; }
+    }
+    return best;
+}
+
+/**
  * P5: classify captured values into the 4 game-data kinds. Pure
  * function (no VM) so it runs in the main thread even when the VM
  * itself is offloaded to a worker.
@@ -390,8 +424,15 @@ async function _runVmStage({ injected, candidates, timeout }) {
     // Fallback: check captured values for a protocol-version candidate
     // from numeric-literal variable declarations (420-460 range).
     if (protocolVersion === null) {
-        for (const c of candidates) {
-            if (c.initKind !== 'version') continue;
+        const versionCands = candidates.filter(c => c.initKind === 'version');
+        if (versionCands.length > 0 && process.env.ZORR_DEBUG) {
+            console.log(`[debug] version candidates (${versionCands.length}):`);
+            for (const c of versionCands) {
+                const v = captured[c.name];
+                console.log(`  ${c.name} = ${v} (${typeof v})`);
+            }
+        }
+        for (const c of versionCands) {
             const v = captured[c.name];
             if (typeof v === 'number' && v >= 420 && v <= 460) {
                 protocolVersion = v;
@@ -550,10 +591,19 @@ async function runFullExtraction({
     }
 
     // Stage 4: handshake wait (one-shot, with hard cap)
-    const { protocolVersion } = await _waitForHandshake(
+    let { protocolVersion } = await _waitForHandshake(
         getHandshakeState,
         { includeProtocol, handshakeMaxWaitMs }
     );
+
+    // Stage 4b: static source scan fallback if handshake didn't yield a version
+    if (protocolVersion === null && includeProtocol) {
+        const scannedVersion = _scanSourceForVersion(source);
+        if (scannedVersion !== null) {
+            protocolVersion = scannedVersion;
+            if (process.env.ZORR_DEBUG) console.log(`[extraction] protocol version from source scan: ${protocolVersion}`);
+        }
+    }
 
     // Keep raw mob references for snake detection (snakeCount is a
     // property that the normalizer may drop). We re-derive indices
@@ -736,4 +786,5 @@ module.exports = {
     _buildTxResolver,
     _parseRootAst,
     _resolveDynamicResolver,
+    _scanSourceForVersion,
 };
