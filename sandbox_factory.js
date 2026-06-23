@@ -22,6 +22,7 @@ const { TextDecoder, TextEncoder } = require('util');
  * @param {Object<string, Function>} [options.hooks] Optional callbacks:
  *   - onWebSocketSend(bytes: Uint8Array)         fired on WebSocket.send
  *   - onWebSocketOpen(ws: MockWebSocket)         fired when the mock's onopen is invoked
+ *   - onDataViewSetUint32(byteOffset, value)     fired on DataView.prototype.setUint32
  *   - onGlobalSet(name: string, value: any)      fired on globalThis[name] = value
  *   - onArrayPush(arr: any[], item: any)         fired on Array.prototype.push
  *   - onMapSet(map: Map, key: any, value: any)   fired on Map.prototype.set
@@ -54,7 +55,10 @@ function createZorrSandbox(options = {}) {
             }, 10);
         }
         send(data) {
-            const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+            let bytes;
+            try {
+                bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+            } catch (_) { return; }
             if (typeof hooks.onWebSocketSend === 'function') {
                 try { hooks.onWebSocketSend(bytes); } catch (_) { /* swallow */ }
             }
@@ -123,6 +127,19 @@ function createZorrSandbox(options = {}) {
         mapPatched = true;
     }
 
+    // Track DataView.prototype.setUint32 calls to capture protocol version
+    // directly from the handshake construction code, even when the game's
+    // onopen handler throws before calling WebSocket.send().
+    const origDataViewSetUint32 = DataView.prototype.setUint32;
+    let dataViewPatched = false;
+    if (typeof hooks.onDataViewSetUint32 === 'function') {
+        DataView.prototype.setUint32 = function patchedSetUint32(byteOffset, value, littleEndian) {
+            try { hooks.onDataViewSetUint32(byteOffset, value, this); } catch (_) { }
+            return origDataViewSetUint32.call(this, byteOffset, value, littleEndian);
+        };
+        dataViewPatched = true;
+    }
+
     // P4: cleanup function to restore prototypes (prevent permanent side effects)
     const cleanup = () => {
         if (arrayPatched) {
@@ -132,6 +149,10 @@ function createZorrSandbox(options = {}) {
         if (mapPatched) {
             Map.prototype.set = origMapSet;
             mapPatched = false;
+        }
+        if (dataViewPatched) {
+            DataView.prototype.setUint32 = origDataViewSetUint32;
+            dataViewPatched = false;
         }
     };
 
@@ -161,13 +182,19 @@ function createZorrSandbox(options = {}) {
             debug() { }, dir() { }, trace() { },
         },
         setTimeout: (fn, ms) => {
-            try { return setTimeout(() => { try { fn(); } catch (_) { /* swallow game timer errors */ } }, ms); }
-            catch (_) { return 0; }
+            try {
+                const id = setTimeout(() => { try { fn(); } catch (_) { /* swallow game timer errors */ } }, ms);
+                if (id && typeof id.unref === 'function') id.unref();
+                return id;
+            } catch (_) { return 0; }
         },
         clearTimeout,
         setInterval: (fn, ms) => {
-            try { return setInterval(() => { try { fn(); } catch (_) { /* swallow game timer errors */ } }, ms); }
-            catch (_) { return 0; }
+            try {
+                const id = setInterval(() => { try { fn(); } catch (_) { /* swallow game timer errors */ } }, ms);
+                if (id && typeof id.unref === 'function') id.unref();
+                return id;
+            } catch (_) { return 0; }
         },
         clearInterval,
         atob: (s) => Buffer.from(s, 'base64').toString('binary'),
@@ -268,7 +295,8 @@ function createZorrSandbox(options = {}) {
             // partial execution is expected; ignore
         }
         // Allow pending microtasks to settle, then restore
-        setTimeout(() => { process.removeListener('unhandledRejection', _rejectHandler); }, 500);
+        const _cleanupTimer = setTimeout(() => { process.removeListener('unhandledRejection', _rejectHandler); }, 500);
+        if (_cleanupTimer && typeof _cleanupTimer.unref === 'function') _cleanupTimer.unref();
     }
 
     function captureFromGlobal(key) {

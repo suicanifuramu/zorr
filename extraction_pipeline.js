@@ -314,6 +314,8 @@ async function _runVmStage({ injected, candidates, timeout }) {
     let captured;
     let vmRunMs;
     let getHandshakeState;
+    let protocolVersion = null;
+    let handshakeReceived = false;
 
     if (_useWorker) {
         // Worker path: VM runs in a separate thread. The captured values
@@ -329,11 +331,10 @@ async function _runVmStage({ injected, candidates, timeout }) {
         // The worker has already waited for the handshake. The "state"
         // returned to stage 4 always indicates ready.
         const pv = job.protocolVersion;
-        getHandshakeState = () => ({ handshakeReceived: true, protocolVersion: pv });
+        if (pv !== null) protocolVersion = pv;
+        getHandshakeState = () => ({ handshakeReceived: true, protocolVersion });
     } else {
         // In-process path (default): same as before
-        let protocolVersion = null;
-        let handshakeReceived = false;
 
         const sandboxApi = createZorrSandbox({
             hooks: {
@@ -345,6 +346,12 @@ async function _runVmStage({ injected, candidates, timeout }) {
                             const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
                             protocolVersion = view.getUint32(1);
                         } catch (_) { /* ignore malformed */ }
+                    }
+                },
+                onDataViewSetUint32: (byteOffset, value) => {
+                    if (protocolVersion !== null) return;
+                    if (byteOffset >= 0 && byteOffset <= 4 && value >= 400 && value <= 1000) {
+                        protocolVersion = value;
                     }
                 },
             },
@@ -379,6 +386,19 @@ async function _runVmStage({ injected, candidates, timeout }) {
     }
 
     const classified = _classifyCaptured(captured, candidates);
+
+    // Fallback: check captured values for a protocol-version candidate
+    // from numeric-literal variable declarations (420-460 range).
+    if (protocolVersion === null) {
+        for (const c of candidates) {
+            if (c.initKind !== 'version') continue;
+            const v = captured[c.name];
+            if (typeof v === 'number' && v >= 420 && v <= 460) {
+                protocolVersion = v;
+                break;
+            }
+        }
+    }
 
     return { captured, classified, vmRunMs, getHandshakeState };
 }

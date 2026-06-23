@@ -122,6 +122,17 @@ function findCandidates(source) {
                         initKind: 'func',
                         initLen: 0,
                     });
+                } else if (i.type === 'Literal'
+                    && typeof i.value === 'number'
+                    && i.value >= 420 && i.value <= 460) {
+                    // Candidate protocol version: a numeric literal
+                    // variable declaration in the plausible range.
+                    candidates.push({
+                        name: d.id.name,
+                        declEnd: node.end,
+                        initKind: 'version',
+                        initLen: i.value,
+                    });
                 }
             }
         }

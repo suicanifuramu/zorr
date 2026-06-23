@@ -48,6 +48,12 @@ async function _runVmJob({ injected, candidates, timeout, includeProtocol, hands
                     } catch (_) { /* ignore malformed */ }
                 }
             },
+            onDataViewSetUint32: (byteOffset, value) => {
+                if (protocolVersion !== null) return;
+                if (byteOffset >= 0 && byteOffset <= 4 && value >= 400 && value <= 1000) {
+                    protocolVersion = value;
+                }
+            },
         },
     });
 
@@ -79,6 +85,17 @@ async function _runVmJob({ injected, candidates, timeout, includeProtocol, hands
         }
         if (handshakeReceived && protocolVersion === null) {
             await new Promise(r => setTimeout(r, 200));
+        }
+        // Fallback: check captured values for protocol version candidate
+        if (protocolVersion === null) {
+            for (const c of candidates) {
+                if (c.initKind !== 'version') continue;
+                const v = captured[c.name];
+                if (typeof v === 'number' && v >= 420 && v <= 460) {
+                    protocolVersion = v;
+                    break;
+                }
+            }
         }
     }
 
