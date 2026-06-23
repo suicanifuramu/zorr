@@ -78,7 +78,7 @@ async function _runVmJob({ injected, candidates, timeout, includeProtocol, hands
             await new Promise(r => setTimeout(r, 20));
         }
         if (handshakeReceived && protocolVersion === null) {
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise(r => setTimeout(r, 200));
         }
     }
 

@@ -400,7 +400,7 @@ async function _waitForHandshake(getState, {
     }
     const { handshakeReceived, protocolVersion } = getState();
     if (handshakeReceived && protocolVersion === null) {
-        await new Promise(r => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 200));
     }
     return { protocolVersion: getState().protocolVersion };
 }

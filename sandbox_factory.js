@@ -43,7 +43,11 @@ function createZorrSandbox(options = {}) {
             this.binaryType = 'arraybuffer';
             this._listeners = {};
             setTimeout(() => {
-                if (typeof this.onopen === 'function') this.onopen({});
+                try {
+                    if (typeof this.onopen === 'function') {
+                        this.onopen({ target: this, currentTarget: this });
+                    }
+                } catch (_) { /* swallow game onopen errors */ }
                 if (typeof hooks.onWebSocketOpen === 'function') {
                     try { hooks.onWebSocketOpen(this); } catch (_) { /* swallow */ }
                 }
