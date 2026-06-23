@@ -156,7 +156,16 @@ function createZorrSandbox(options = {}) {
             log() { }, warn() { }, error() { }, info() { },
             debug() { }, dir() { }, trace() { },
         },
-        setTimeout, clearTimeout, setInterval, clearInterval,
+        setTimeout: (fn, ms) => {
+            try { return setTimeout(() => { try { fn(); } catch (_) { /* swallow game timer errors */ } }, ms); }
+            catch (_) { return 0; }
+        },
+        clearTimeout,
+        setInterval: (fn, ms) => {
+            try { return setInterval(() => { try { fn(); } catch (_) { /* swallow game timer errors */ } }, ms); }
+            catch (_) { return 0; }
+        },
+        clearInterval,
         atob: (s) => Buffer.from(s, 'base64').toString('binary'),
         btoa: (s) => Buffer.from(s, 'binary').toString('base64'),
         encodeURIComponent, encodeURI,
