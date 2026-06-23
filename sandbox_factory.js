@@ -254,11 +254,17 @@ function createZorrSandbox(options = {}) {
 
     function runScript(src, opts = {}) {
         const scriptOpts = { filename: opts.filename || 'zorr.js' };
+        // Suppress unhandled rejections from game code async callbacks
+        // (e.g. fetch().then() chains that throw inside the sandbox)
+        const _rejectHandler = () => {};
+        process.on('unhandledRejection', _rejectHandler);
         try {
             new vm.Script(src, scriptOpts).runInContext(ctx, { timeout: opts.timeout || 30000 });
         } catch (_) {
             // partial execution is expected; ignore
         }
+        // Allow pending microtasks to settle, then restore
+        setTimeout(() => { process.removeListener('unhandledRejection', _rejectHandler); }, 500);
     }
 
     function captureFromGlobal(key) {
