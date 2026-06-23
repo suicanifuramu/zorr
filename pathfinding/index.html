@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pathfinding</title>
+
+<script src="pathfinding-browser.min.js"></script>
+
+<style>
+body {
+    font-family: sans-serif;
+    margin: 20px;
+}
+
+canvas {
+    border: 1px solid #000;
+    image-rendering: pixelated;
+}
+
+#info {
+    margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+
+<div id="info">
+    1回目クリック: 開始地点（緑）<br>
+    2回目クリック: 終了地点（青）<br>
+    3回目クリック: 新しい開始地点
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+let map;
+let start = null;
+let end = null;
+
+const scale = 4;
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+let distanceMap = null;
+
+const CENTER_COST = 20;
+
+class MinHeap {
+    constructor() {
+        this.data = [];
+    }
+    
+    push(item) {
+        this.data.push(item);
+        this._bubbleUp(this.data.length - 1);
+    }
+    
+    pop() {
+        const top = this.data[0];
+        const last = this.data.pop();
+        if (this.data.length > 0) {
+            this.data[0] = last;
+            this._sinkDown(0);
+        }
+        return top;
+    }
+    
+    get size() {
+        return this.data.length;
+    }
+    
+    _bubbleUp(i) {
+        while (i > 0) {
+            const parent = (i - 1) >> 1;
+            if (this.data[i].f < this.data[parent].f) {
+                [this.data[i], this.data[parent]] = [this.data[parent], this.data[i]];
+                i = parent;
+            } else break;
+        }
+    }
+    
+    _sinkDown(i) {
+        const n = this.data.length;
+        while (true) {
+            let smallest = i;
+            const left = 2 * i + 1;
+            const right = 2 * i + 2;
+            if (left < n && this.data[left].f < this.data[smallest].f) smallest = left;
+            if (right < n && this.data[right].f < this.data[smallest].f) smallest = right;
+            if (smallest !== i) {
+                [this.data[i], this.data[smallest]] = [this.data[smallest], this.data[i]];
+                i = smallest;
+            } else break;
+        }
+    }
+}
+
+function heuristic(x, y, endX, endY) {
+    return Math.hypot(endX - x, endY - y);
+}
+
+function buildDistanceMap() {
+
+    const dist = Array.from(
+        { length: map.height },
+        () => Array(map.width).fill(Infinity)
+    );
+
+    const queue = [];
+
+    for (let y = 0; y < map.height; y++) {
+        for (let x = 0; x < map.width; x++) {
+            if (map.grid[y][x] === 1) {
+                dist[y][x] = 0;
+                queue.push([x, y]);
+            }
+        }
+    }
+
+    let head = 0;
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+
+    while (head < queue.length) {
+        const [x, y] = queue[head++];
+
+        for (const [dx, dy] of dirs) {
+            const nx = x + dx;
+            const ny = y + dy;
+
+            if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
+
+            if (dist[ny][nx] > dist[y][x] + 1) {
+                dist[ny][nx] = dist[y][x] + 1;
+                queue.push([nx, ny]);
+            }
+        }
+    }
+
+    return dist;
+}
+
+async function loadMap() {
+
+    map = await fetch("map.json").then(r => r.json());
+
+    console.log("loaded map");
+    console.log(map.width, map.height);
+
+    canvas.width = map.width * scale;
+    canvas.height = map.height * scale;
+
+    distanceMap = buildDistanceMap();
+
+    console.log("distance map ready");
+
+    drawMap();
+}
+
+function drawMap() {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let y = 0; y < map.height; y++) {
+
+        for (let x = 0; x < map.width; x++) {
+
+            ctx.fillStyle =
+                map.grid[y][x] === 1
+                    ? "#000000"
+                    : "#FFFFFF";
+
+            ctx.fillRect(
+                x * scale,
+                y * scale,
+                scale,
+                scale
+            );
+        }
+    }
+
+    if (start) {
+
+        ctx.fillStyle = "#00FF00";
+
+        ctx.fillRect(
+            start.x * scale,
+            start.y * scale,
+            scale,
+            scale
+        );
+    }
+
+    if (end) {
+
+        ctx.fillStyle = "#0000FF";
+
+        ctx.fillRect(
+            end.x * scale,
+            end.y * scale,
+            scale,
+            scale
+        );
+    }
+}
+
+canvas.addEventListener("click", e => {
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = Math.floor(
+        (e.clientX - rect.left) / scale
+    );
+
+    const y = Math.floor(
+        (e.clientY - rect.top) / scale
+    );
+
+    if (
+        x < 0 ||
+        y < 0 ||
+        x >= map.width ||
+        y >= map.height
+    ) {
+        return;
+    }
+
+    if (map.grid[y][x] === 1) {
+
+        alert("壁です");
+
+        return;
+    }
+
+    if (!start) {
+
+        start = { x, y };
+        end = null;
+
+        drawMap();
+
+        console.log("START", start);
+
+        return;
+    }
+
+    if (!end) {
+
+        end = { x, y };
+
+        drawMap();
+
+        console.log("END", end);
+
+        findPath();
+
+        return;
+    }
+
+    start = { x, y };
+    end = null;
+
+    drawMap();
+
+    console.log("NEW START", start);
+});
+
+function findPath() {
+
+    console.log("findPath");
+
+    const open = new MinHeap();
+    const gScore = Array.from(
+        { length: map.height },
+        () => Array(map.width).fill(Infinity)
+    );
+    const parent = Array.from(
+        { length: map.height },
+        () => Array(map.width).fill(null)
+    );
+    const closed = Array.from(
+        { length: map.height },
+        () => Array(map.width).fill(false)
+    );
+
+    gScore[start.y][start.x] = 0;
+    open.push({
+        x: start.x,
+        y: start.y,
+        f: heuristic(start.x, start.y, end.x, end.y)
+    });
+
+    const dirs = [
+        [1, 0, 1],
+        [-1, 0, 1],
+        [0, 1, 1],
+        [0, -1, 1],
+        [1, 1, Math.SQRT2],
+        [-1, 1, Math.SQRT2],
+        [1, -1, Math.SQRT2],
+        [-1, -1, Math.SQRT2]
+    ];
+
+    while (open.size > 0) {
+        const current = open.pop();
+
+        if (current.x === end.x && current.y === end.y) break;
+
+        if (closed[current.y][current.x]) continue;
+        closed[current.y][current.x] = true;
+
+        for (const [dx, dy, baseCost] of dirs) {
+            const nx = current.x + dx;
+            const ny = current.y + dy;
+
+            if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
+            if (map.grid[ny][nx] === 1) continue;
+            if (closed[ny][nx]) continue;
+
+            if (dx !== 0 && dy !== 0) {
+                if (map.grid[current.y][nx] === 1 || map.grid[ny][current.x] === 1) continue;
+            }
+
+            const moveCost = baseCost + CENTER_COST / (distanceMap[ny][nx] + 1);
+            const tentativeG = gScore[current.y][current.x] + moveCost;
+
+            if (tentativeG < gScore[ny][nx]) {
+                gScore[ny][nx] = tentativeG;
+                parent[ny][nx] = [current.x, current.y];
+                open.push({
+                    x: nx,
+                    y: ny,
+                    f: tentativeG + heuristic(nx, ny, end.x, end.y)
+                });
+            }
+        }
+    }
+
+    const path = [];
+    let cx = end.x, cy = end.y;
+
+    while (cx !== start.x || cy !== start.y) {
+        path.push([cx, cy]);
+        const p = parent[cy][cx];
+        if (!p) {
+            alert("経路が見つかりません");
+            return;
+        }
+        [cx, cy] = p;
+    }
+
+    path.push([start.x, start.y]);
+    path.reverse();
+
+    const compressed = PF.Util.compressPath(path);
+
+    console.log("path", compressed);
+
+    if (compressed.length === 0) {
+        alert("経路が見つかりません");
+        return;
+    }
+
+    drawMap();
+
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+
+    compressed.forEach(([x, y], i) => {
+        const px = x * scale + scale / 2;
+        const py = y * scale + scale / 2;
+
+        if (i === 0) {
+            ctx.moveTo(px, py);
+        } else {
+            ctx.lineTo(px, py);
+        }
+    });
+
+    ctx.stroke();
+
+    ctx.fillStyle = "#00FF00";
+    ctx.fillRect(start.x * scale, start.y * scale, scale, scale);
+
+    ctx.fillStyle = "#0000FF";
+    ctx.fillRect(end.x * scale, end.y * scale, scale, scale);
+}
+
+loadMap();
+
+</script>
+
+</body>
+</html>

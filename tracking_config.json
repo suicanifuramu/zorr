@@ -1,0 +1,1656 @@
+{
+  "webhookUrl": "",
+  "targets": [
+    {
+      "slug": "baby_fire_ant",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "cactus",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "desert_centipede",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "fire_ant_hole",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "nazar_beetle",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "queen_fire_ant",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "rattlesnake",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "sandstorm",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "shiny_ladybug",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "target_mummy",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "worker_fire_ant",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "beetle",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "cicada",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "fossil",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "palm_tree",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "rain_frog",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "sandstone",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "scorpion",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "soldier_fire_ant",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "tumbleweed",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "ant_hole",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "baby_ant",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "beekeeper",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "dandelion",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hive",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "ladybug",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "queen_bee",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "soldier_ant",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "spider_cave",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "spider_yoba",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "target_dummy",
+      "enabled": false,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        6
+      ]
+    },
+    {
+      "slug": "avocado",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "bee",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "centipede",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hornet",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "queen_ant",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "rock",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "spider",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "spider_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "sunflower",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "worker_ant",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "bubble",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "electric_eel",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "jellyfish",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "lily_pad",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "oracle",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "shark",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "shipwreck",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "squid",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "turtle",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "waterspout",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "crab",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "geyser",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "leech",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "pirate_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "shell",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "sponge",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "starfish",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "urchin",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "baby_termite",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "dark_ladybug",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "firefly",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "mantis",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "pumpkin",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "snake",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "stickbug",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "termite_hole",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "trader",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "worker_termite",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "bush",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "evil_centipede",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "fly",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "mushroom",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "snail",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "soldier_termite",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "termite_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "termite_overmind",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "wasp",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "boba",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "dragon",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "fire_eel",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_bee",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_beetle",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_hornet",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_queen_bee",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_worm",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "m28",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "toxic_dragon",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "yoba",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "bugatti",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "dragon_nest",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "firestorm",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_beekeeper",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_centipede",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_hive",
+      "enabled": true,
+      "variants": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "hel_jellyfish",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "hel_spider",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "lamprey_eel",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "volcano",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "arctic_centipede",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "arctic_spider_cave",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "ice_cube",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "ice_hornet",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "nuke",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "snowman",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "stalagmite",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "arctic_spider",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "frost_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "ice_dragon",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "igloo",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "snowbush",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "snowstorm",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "tick",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "assembler",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "bacteria",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "barrel",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "cancer",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "red_blood_cell",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "virus",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "atom",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "bacteriophage",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "biologist",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "parasite",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "stem_cell",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "white_blood_cell",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "alien",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "angel",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "cicada_3301",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "ghost",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "gravestone",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "momy",
+      "enabled": true,
+      "variants": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "tesla_coil",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "troll",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "unabomber",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "zatan",
+      "enabled": true,
+      "variants": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "alien_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "black_hole",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "eye",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "grave_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "illuminati",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "titan",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "ufo",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "white_hole",
+      "enabled": true,
+      "variants": [
+        4,
+        5,
+        6
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "acid_bubble",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "bat",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "manhole",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "nazarlion",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "pooworm",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "roach",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "trash_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "vampire_digger",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "baby_rat",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "bat_cave",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "larva",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "mosquito",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "poostorm",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "rat",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "silverfish",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "trashcan",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "yeba",
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "dodo",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "fern",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "meteor",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "pterodactyl",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "tyrannosaurus",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "ankylosaurus",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "diplodocus",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "elasmosaurus",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "nigersaurus",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "stegosaurus",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "velociraptor",
+      "enabled": false,
+      "variants": [],
+      "rarities": []
+    },
+    {
+      "slug": "cube",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "monkey",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "tesseract",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "gift",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "square",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
+    }
+  ]
+}
