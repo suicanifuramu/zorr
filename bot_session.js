@@ -209,7 +209,8 @@ class BotSession {
         this._franticDirIndex = 0;
         this._franticDirEnd = 0;
         this._corruptInvert = false;
-        this._mobBlockDetour = false;
+        this._mobBlockDefending = false;
+        this._mobBlockDetouring = false;
         this._mobBlockDefendUntil = 0;
         this._mobBlockWPKey = '';
 
@@ -964,7 +965,7 @@ class BotSession {
     // ── Navigation ──
     _resetStuck() {
         this._stuckCellKey=null; this._franticMode=false;
-        this._mobBlockDetour=false; this._mobBlockWPKey=''; this._mobBlockDefendUntil=0;
+        this._mobBlockDetouring=false; this._mobBlockWPKey=''; this._mobBlockDefendUntil=0;
     }
 
     _computePath() {
@@ -1017,7 +1018,7 @@ class BotSession {
     }
 
     _recomputePathIfNavigating() {
-        if(!this.navigateTarget||this.navPath.length===0||this._mobBlockDetour)return;
+        if(!this.navigateTarget||this.navPath.length===0||this._mobBlockDetouring)return;
         const cSize=this.serverMapSize/this.gridWidth;
         const sx=Math.floor(this.botX/cSize),sy=Math.floor(this.botY/cSize);
         const k=sx+','+sy;
@@ -1066,8 +1067,8 @@ class BotSession {
     }
 
     _navigateTick() {
-        // Defend fallback
-        if(this._mobBlockDefendUntil>0){
+        // Defend phase: try to push through a blocked cell before attempting detour
+        if(this._mobBlockDefending){
             if(Date.now()<this._mobBlockDefendUntil&&this.navigateTarget){
                 this._corruptInvert=false;
                 for(const mob of this.activeMobs.values()){if(mob.variant===5){this._corruptInvert=true;break;}}
@@ -1077,7 +1078,29 @@ class BotSession {
                 const wd=this._wallAwareMove(dx/dist,dy/dist,Math.floor(this.botX/cSize),Math.floor(this.botY/cSize));
                 this._sendMovement(wd.vx,wd.vy,2); return;
             }
-            this._mobBlockDefendUntil=0;
+            // Defend time expired; check if cell is still blocked
+            this._mobBlockDefending=false;
+            if(this.navigateTarget){
+                const cSize=this.serverMapSize/this.gridWidth;
+                const tgtCX=Math.floor(this.navigateTarget.x/cSize), tgtCY=Math.floor(this.navigateTarget.y/cSize);
+                if(this._isCellBlockedByMob(tgtCX,tgtCY,cSize)){
+                    // Defend failed → switch to detour
+                    this._mobBlockDetouring=true;
+                    const pv=this.mapGrid[tgtCY][tgtCX]; this.mapGrid[tgtCY][tgtCX]=0;
+                    this._computePath(); this.mapGrid[tgtCY][tgtCX]=pv;
+                    if(this.navPath.length===0){
+                        console.log(`[MobBlock] No detour after defend, skip WP cell ${tgtCX},${tgtCY}`);
+                        this._mobBlockDetouring=false; this._mobBlockWPKey='';
+                        this.navRouteIndex++;
+                        if(this.navRouteIndex>=this.navRoute.length){this.navRoute=[];this.navRouteIndex=0;this.apOnRouteComplete();this._sendMovement(0,0);return;}
+                        this.navigateTarget={x:this.navRoute[this.navRouteIndex].x,y:this.navRoute[this.navRouteIndex].y};
+                        this._computePath(); return;
+                    }
+                    console.log(`[MobBlock] Detour found after defend for cell ${tgtCX},${tgtCY}`);
+                } else {
+                    this._mobBlockWPKey='';
+                }
+            }
         }
         if(!this.isSpawned||(!this.navPath.length&&!this.navRoute.length)||(!this.navigateTarget&&this.navRoute.length===0)){this._sendMovement(0,0);return;}
 
@@ -1108,11 +1131,11 @@ class BotSession {
         } else { this._stuckCellKey=null; this._stuckSince=now; }
 
         // Route patrol
-        if(this.navRoute.length>0&&this.navRouteIndex<this.navRoute.length){
+        if(this.navRoute.length>0&&this.navRouteIndex<this.navRoute.length&&!this._mobBlockDetouring){
             const target=this.navRoute[this.navRouteIndex];
             const tCX=Math.floor(target.x/cSize), tCY=Math.floor(target.y/cSize);
             if(Math.abs(botCX-tCX)<=1&&Math.abs(botCY-tCY)<=1){
-                this._mobBlockDetour=false; this._mobBlockWPKey=''; this._mobBlockDefendUntil=0;
+        this._mobBlockDefending=false; this._mobBlockDetouring=false; this._mobBlockWPKey=''; this._mobBlockDefendUntil=0;
                 this.navRouteIndex++;
                 if(this.navRouteIndex>=this.navRoute.length){this.navRoute=[];this.navRouteIndex=0;this.apOnRouteComplete();this._sendMovement(0,0);return;}
                 this.navigateTarget={x:this.navRoute[this.navRouteIndex].x,y:this.navRoute[this.navRouteIndex].y};
@@ -1123,36 +1146,28 @@ class BotSession {
             }
         }
 
-        // Mob-blocking
-        if(this.navigateTarget&&this.navRoute.length>0&&!this._mobBlockDetour){
+        // Mob-blocking: defend first, then detour
+        if(this.navigateTarget&&this.navRoute.length>0&&!this._mobBlockDefending&&!this._mobBlockDetouring){
             const tgtCX=Math.floor(this.navigateTarget.x/cSize), tgtCY=Math.floor(this.navigateTarget.y/cSize);
             const wpKey=tgtCX+','+tgtCY;
             if(this._isCellBlockedByMob(tgtCX,tgtCY,cSize)){
                 if(this._mobBlockWPKey!==wpKey){
-                    this._mobBlockWPKey=wpKey; this._mobBlockDetour=false;
-                    const pv=this.mapGrid[tgtCY][tgtCX]; this.mapGrid[tgtCY][tgtCX]=0;
-                    this._computePath(); this.mapGrid[tgtCY][tgtCX]=pv;
-                    if(this.navPath.length>0){this._mobBlockDetour=true;}
-                    else{this._mobBlockDefendUntil=Date.now()+1000;}
+                    this._mobBlockWPKey=wpKey; this._mobBlockDefending=true; this._mobBlockDefendUntil=Date.now()+1000;
+                    console.log(`[MobBlock] Defending for 1s at ${wpKey}`);
                 }
-                if(Date.now()<this._mobBlockDefendUntil){
-                    const dx=this.navigateTarget.x-this.botX, dy=this.navigateTarget.y-this.botY;
-                    const dist=Math.hypot(dx,dy)||1;
-                    const wd=this._wallAwareMove(dx/dist,dy/dist,botCX,botCY);
-                    this._sendMovement(wd.vx,wd.vy,2); return;
-                }
-                if(this._mobBlockWPKey===wpKey&&Date.now()>=this._mobBlockDefendUntil){this._mobBlockWPKey='';this._mobBlockDetour=false;}
-            } else { if(this._mobBlockDetour){this._mobBlockDetour=false;this._mobBlockWPKey='';} }
+            } else {
+                this._mobBlockWPKey='';
+            }
         }
 
         if(!this.navPath.length||!this.navigateTarget){this._sendMovement(0,0);return;}
         const wp=this.navPath[this.navWaypointIndex];
         const tgtCX=Math.floor(this.navigateTarget.x/cSize), tgtCY=Math.floor(this.navigateTarget.y/cSize);
-        if(Math.abs(botCX-tgtCX)<=1&&Math.abs(botCY-tgtCY)<=1){this.navPath=[];this.navigateTarget=null;this._sendMovement(0,0);return;}
+        if(Math.abs(botCX-tgtCX)<=1&&Math.abs(botCY-tgtCY)<=1){this._mobBlockDefending=false;this._mobBlockDetouring=false;this._mobBlockWPKey='';this.navPath=[];this.navigateTarget=null;this._sendMovement(0,0);return;}
         if(Math.abs(botCX-wp[0])<=1&&Math.abs(botCY-wp[1])<=1){
             this.navWaypointIndex++;
             if(this.navWaypointIndex>=this.navPath.length){
-                if(this._mobBlockDetour){this._mobBlockDetour=false;this._mobBlockWPKey='';this._mobBlockDefendUntil=Date.now()+1000;this.navPath=[];this.navigateTarget=null;return;}
+                if(this._mobBlockDetouring){this._mobBlockDetouring=false;this._mobBlockWPKey='';this.navPath=[];this.navigateTarget=null;this.navRouteIndex++;if(this.navRouteIndex>=this.navRoute.length){this.navRoute=[];this.navRouteIndex=0;this.apOnRouteComplete();this._sendMovement(0,0);return;}this.navigateTarget={x:this.navRoute[this.navRouteIndex].x,y:this.navRoute[this.navRouteIndex].y};this._computePath();return;}
                 else{this.navPath=[];this.navigateTarget=null;this._sendMovement(0,0);return;}
             }
             const nwp=this.navPath[this.navWaypointIndex];

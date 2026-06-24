@@ -1486,13 +1486,15 @@ const _FRANTIC_DIRS = [
 ];
 let _corruptInvert = false;
 // Mob-blocking detour state
-let _mobBlockDetour = false;     // true while following a detour around a mob
+let _mobBlockDefending = false;  // true while defending (pushing) through a blocked cell
+let _mobBlockDetouring = false;  // true while following a detour around a mob
 let _mobBlockDefendUntil = 0;    // timestamp: defend until this time
 let _mobBlockWPKey = '';         // routeWP key to prevent retry spam
 function _resetStuck() {
     _stuckCellKey = null;
     _franticMode = false;
-    _mobBlockDetour = false;
+    _mobBlockDefending = false;
+    _mobBlockDetouring = false;
     _mobBlockWPKey = '';
     _mobBlockDefendUntil = 0;
 }
@@ -2069,8 +2071,8 @@ function _wallAwareMove(desiredVX, desiredVY, cx, cy) {
 }
 
 function navigateTick() {
-    // Defend fallback: move toward target while defending (after detour exhaustion)
-    if (_mobBlockDefendUntil > 0) {
+    // Defend phase: try to push through a blocked cell before attempting detour
+    if (_mobBlockDefending) {
         if (Date.now() < _mobBlockDefendUntil && navigateTarget) {
             _corruptInvert = false;
             for (const mob of activeMobs.values()) {
@@ -2085,7 +2087,42 @@ function navigateTick() {
             sendMovement(wallDir.vx, wallDir.vy, 2);
             return;
         }
-        _mobBlockDefendUntil = 0;
+        // Defend time expired; check if cell is still blocked
+        _mobBlockDefending = false;
+        if (navigateTarget) {
+            const cSize = serverMapSize / gridWidth;
+            const tgtCX = Math.floor(navigateTarget.x / cSize);
+            const tgtCY = Math.floor(navigateTarget.y / cSize);
+            if (_isCellBlockedByMob(tgtCX, tgtCY, cSize)) {
+                // Defend failed → switch to detour
+                _mobBlockDetouring = true;
+                const prevVal = mapGrid[tgtCY][tgtCX];
+                mapGrid[tgtCY][tgtCX] = 0;
+                computePath();
+                mapGrid[tgtCY][tgtCX] = prevVal;
+                if (navPath.length === 0) {
+                    // No detour possible → skip this waypoint
+                    console.log(`[MobBlock] No detour after defend, skip WP cell ${tgtCX},${tgtCY}`);
+                    _mobBlockDetouring = false;
+                    _mobBlockWPKey = '';
+                    navRouteIndex++;
+                    if (navRouteIndex >= navRoute.length) {
+                        navRoute = [];
+                        navRouteIndex = 0;
+                        apOnRouteComplete();
+                        sendMovement(0, 0);
+                        return;
+                    }
+                    navigateTarget = { x: navRoute[navRouteIndex].x, y: navRoute[navRouteIndex].y };
+                    computePath();
+                    return;
+                }
+                console.log(`[MobBlock] Detour found after defend for cell ${tgtCX},${tgtCY}`);
+            } else {
+                // Cell cleared during defend → proceed normally
+                _mobBlockWPKey = '';
+            }
+        }
     }
 
     if (!isSpawned || (!navPath.length && !navRoute.length) || (!navigateTarget && navRoute.length === 0)) {
@@ -2151,15 +2188,16 @@ function navigateTick() {
     }
     // --- End stuck detection ---
 
-    // Route patrol: follow navRoute waypoints sequentially
-    if (navRoute.length > 0 && navRouteIndex < navRoute.length) {
+    // Route patrol (skipped while detouring to avoid path recomputation)
+    if (navRoute.length > 0 && navRouteIndex < navRoute.length && !_mobBlockDetouring) {
         const target = navRoute[navRouteIndex];
         const targetCX = Math.floor(target.x / cSize);
         const targetCY = Math.floor(target.y / cSize);
         // 2x2 grid arrival check: bot is within 1 cell of waypoint
         if (Math.abs(botCX - targetCX) <= 1 && Math.abs(botCY - targetCY) <= 1) {
             // Reached this waypoint, move to next
-            _mobBlockDetour = false;
+            _mobBlockDefending = false;
+            _mobBlockDetouring = false;
             _mobBlockWPKey = '';
             _mobBlockDefendUntil = 0;
             navRouteIndex++;
@@ -2186,54 +2224,23 @@ function navigateTick() {
         // Fall through to normal path following below
     }
 
-    // --- Mob-blocking detour / defend fallback ---
-    if (navigateTarget && navRoute.length > 0 && !_mobBlockDetour) {
+    // --- Mob-blocking detection: defend first, then detour ---
+    if (navigateTarget && navRoute.length > 0 && !_mobBlockDefending && !_mobBlockDetouring) {
         const tgtCX = Math.floor(navigateTarget.x / cSize);
         const tgtCY = Math.floor(navigateTarget.y / cSize);
         const wpKey = tgtCX + ',' + tgtCY;
 
         if (_isCellBlockedByMob(tgtCX, tgtCY, cSize)) {
-            // Target cell is blocked by a mob
             if (_mobBlockWPKey !== wpKey) {
-                // First time seeing this blocked cell: try detour
+                // First time seeing this blocked cell: start defend phase
                 _mobBlockWPKey = wpKey;
-                _mobBlockDetour = false;
-
-                // Temporarily set mob cell as wall and recompute
-                const prevVal = mapGrid[tgtCY][tgtCX];
-                mapGrid[tgtCY][tgtCX] = 0;
-                computePath();
-                mapGrid[tgtCY][tgtCX] = prevVal;
-
-                if (navPath.length > 0) {
-                    _mobBlockDetour = true;
-                    console.log(`[MobBlock] Detour found for cell ${wpKey}`);
-                } else {
-                    // No detour: enter defend mode for 1 second
-                    _mobBlockDefendUntil = Date.now() + 1000;
-                    console.log(`[MobBlock] No detour, defend for 1s at ${wpKey}`);
-                }
-            }
-            // If still in defend window, send movement + defend flag
-            if (Date.now() < _mobBlockDefendUntil) {
-                const dx = navigateTarget.x - botX;
-                const dy = navigateTarget.y - botY;
-                const dist = Math.hypot(dx, dy) || 1;
-                const wallDir = _wallAwareMove(dx / dist, dy / dist, botCX, botCY);
-                sendMovement(wallDir.vx, wallDir.vy, 2); // flags=2 = defend
-                return;
-            }
-            // Defend window expired, reset and let normal path following take over
-            if (_mobBlockWPKey === wpKey && Date.now() >= _mobBlockDefendUntil) {
-                _mobBlockWPKey = '';
-                _mobBlockDetour = false;
+                _mobBlockDefending = true;
+                _mobBlockDefendUntil = Date.now() + 1000;
+                console.log(`[MobBlock] Defending for 1s at ${wpKey}`);
             }
         } else {
             // Target cell is clear: reset mob-block state
-            if (_mobBlockDetour) {
-                _mobBlockDetour = false;
-                _mobBlockWPKey = '';
-            }
+            _mobBlockWPKey = '';
         }
     }
     // --- End mob-blocking ---
@@ -2249,6 +2256,9 @@ function navigateTick() {
     const tgtCX = Math.floor(navigateTarget.x / cSize);
     const tgtCY = Math.floor(navigateTarget.y / cSize);
     if (Math.abs(botCX - tgtCX) <= 1 && Math.abs(botCY - tgtCY) <= 1) {
+        _mobBlockDefending = false;
+        _mobBlockDetouring = false;
+        _mobBlockWPKey = '';
         navPath = [];
         navigateTarget = null;
         sendMovement(0, 0);
@@ -2259,14 +2269,23 @@ function navigateTick() {
     if (Math.abs(botCX - wp[0]) <= 1 && Math.abs(botCY - wp[1]) <= 1) {
         navWaypointIndex++;
         if (navWaypointIndex >= navPath.length) {
-            if (_mobBlockDetour) {
-                // Detour path exhausted but not at target: defend and push through
-                _mobBlockDetour = false;
+            if (_mobBlockDetouring) {
+                // Detour path exhausted but not at target: skip this waypoint
+                _mobBlockDetouring = false;
                 _mobBlockWPKey = '';
-                _mobBlockDefendUntil = Date.now() + 1000;
                 navPath = [];
                 navigateTarget = null;
-                console.log('[MobBlock] Detour exhausted, defend for 1s');
+                console.log('[MobBlock] Detour exhausted, skip WP');
+                navRouteIndex++;
+                if (navRouteIndex >= navRoute.length) {
+                    navRoute = [];
+                    navRouteIndex = 0;
+                    apOnRouteComplete();
+                    sendMovement(0, 0);
+                    return;
+                }
+                navigateTarget = { x: navRoute[navRouteIndex].x, y: navRoute[navRouteIndex].y };
+                computePath();
                 return;
             } else {
                 navPath = [];
@@ -2299,7 +2318,7 @@ function navigateTick() {
 // Recompute path if navigating (called after position updates)
 let lastComputeCell = null;
 function recomputePathIfNavigating() {
-    if (!navigateTarget || navPath.length === 0 || _mobBlockDetour) return;
+    if (!navigateTarget || navPath.length === 0 || _mobBlockDetouring) return;
     const cSize = serverMapSize / gridWidth;
     const sx = Math.floor(botX / cSize);
     const sy = Math.floor(botY / cSize);
