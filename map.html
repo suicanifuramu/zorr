@@ -716,7 +716,6 @@
                         <div class="ap-row"><span class="ap-label">State:</span> <span id="ap-state">idle</span></div>
                         <div class="ap-row"><span class="ap-label">Server:</span> <span id="ap-server">-</span></div>
                         <div class="ap-row"><span class="ap-label">Pinky Fail:</span> <span id="ap-pinky-fail">0/3</span></div>
-                        <div class="ap-row"><span class="ap-label">Move Deaths:</span> <span id="ap-move-deaths">0/5</span></div>
                     </div>
                     <div class="ap-log" id="ap-log"></div>
                 </div>
@@ -1100,7 +1099,6 @@
                             active: ac.active || false,
                             state: ac.state || 'idle',
                             pinkyFailCount: ac.pinkyFailCount || 0,
-                            moveDeathCount: ac.moveDeathCount || 0,
                             currentServer: ac.currentServer || null,
                             serverIndex: ac.serverIndex || 0,
                             serverCount: ac.serverCount || 0,
@@ -1769,14 +1767,12 @@
             const stateEl = document.getElementById('ap-state');
             const serverEl = document.getElementById('ap-server');
             const pinkyFailEl = document.getElementById('ap-pinky-fail');
-            const moveDeathsEl = document.getElementById('ap-move-deaths');
             const logEl = document.getElementById('ap-log');
             const startBtn = document.getElementById('ap-start-btn');
             const stopBtn = document.getElementById('ap-stop-btn');
             if (stateEl) stateEl.textContent = data.state || 'idle';
             if (serverEl) serverEl.textContent = data.currentServer ? `${data.currentServer.region}-${data.currentServer.biome}` : '-';
             if (pinkyFailEl) pinkyFailEl.textContent = `${data.pinkyFailCount || 0}/3`;
-            if (moveDeathsEl) moveDeathsEl.textContent = `${data.moveDeathCount || 0}/2`;
             if (startBtn) startBtn.style.display = data.active ? 'none' : '';
             if (stopBtn) stopBtn.style.display = data.active ? '' : 'none';
             if (logEl && data.log) {

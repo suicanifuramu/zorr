@@ -20,7 +20,6 @@ const BUILD_MAGIC = 1;
 const BUILD_AX = 32;
 const ENTITY_TYPE = { ENTITY:0, PLAYER:1, PETAL:2, MOB:3, DROP:4, ZONE_O:5, ZONE_B:6, ZONE_U:7, UNDERSCORE:8, ZONE_G:9, ZONE_Q:10, WALL:11, ZONE_V:12, LIGHTNING:13, EXPLOSION:14 };
 const UPDATE_FLAGS = { POSITION:1, ANGLE:2, SIZE:4, DAMAGE:8, LAYER:16, STATUS:32, LEVEL:64, FACE:128, VG:256, GUILD:512, MANA:1024, GE:2048, HEALTH:4096, PE:8192 };
-const _VARIANT_NAMES = ['Normal','Magic','Arcane','Cursed','Shiny','Corrupt','Radiant','Giant','Tiny','Charged','Elemental','Angelic','Demonic','Bloody','Sweet','Paranormal','Flash','Boss'];
 const CENTER_COST = 25;
 const _FRANTIC_DIRS = [[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[-1,1],[0,1],[1,1]];
 const AP_LOG_MAX = 50;
@@ -139,6 +138,8 @@ class BotSession {
         this._mobSlugs = sharedData.mobSlugs;
         this._snakeMobIndices = sharedData.snakeMobIndices;
         this._rarities = sharedData.rarities;
+        this._variants = sharedData.variants || [];
+        this._variantNames = this._variants.map(v => v.name);
         this._PINKY_BITMASK = sharedData.PINKY_BITMASK;
         this._protocolVersion = sharedData.protocolVersion;
 
@@ -215,7 +216,7 @@ class BotSession {
         this._mobBlockWPKey = '';
 
         // Auto patrol
-        this._AP = { active: false, state: 'idle', pinkyFailCount: 0, moveDeathCount: 0, pinkyTimeout: null, servers: [], serverIndex: 0, buildSwitchTimeout: null, log: [], routes: {} };
+        this._AP = { active: false, state: 'idle', pinkyFailCount: 0, pinkyTimeout: null, servers: [], serverIndex: 0, buildSwitchTimeout: null, log: [], routes: {} };
 
         // Server toggles
         this.serverAttackToggled = false;
@@ -1189,12 +1190,12 @@ class BotSession {
         const line=`[${new Date().toLocaleTimeString()}] ${msg}`;
         this._AP.log.push(line);
         if(this._AP.log.length>AP_LOG_MAX) this._AP.log.shift();
-        this._broadcastMapData({type:'auto-patrol',session:this._currentSessionId,state:this._AP.state,pinkyFailCount:this._AP.pinkyFailCount,moveDeathCount:this._AP.moveDeathCount,active:this._AP.active,currentServer:this._AP.servers[this._AP.serverIndex]||null,serverIndex:this._AP.serverIndex,serverCount:this._AP.servers.length,log:this._AP.log.slice(-10)});
+        this._broadcastMapData({type:'auto-patrol',session:this._currentSessionId,state:this._AP.state,pinkyFailCount:this._AP.pinkyFailCount,active:this._AP.active,currentServer:this._AP.servers[this._AP.serverIndex]||null,serverIndex:this._AP.serverIndex,serverCount:this._AP.servers.length,log:this._AP.log.slice(-10)});
     }
     apClearTimers() { if(this._AP.pinkyTimeout){clearTimeout(this._AP.pinkyTimeout);this._AP.pinkyTimeout=null;} if(this._AP.buildSwitchTimeout){clearTimeout(this._AP.buildSwitchTimeout);this._AP.buildSwitchTimeout=null;} }
     apStop() {
         this.apClearTimers(); this._AP.active=false; this._AP.state='idle';
-        this._AP.pinkyFailCount=0; this._AP.moveDeathCount=0; this._AP.servers=[]; this._AP.serverIndex=0; this._AP.log=[];
+        this._AP.pinkyFailCount=0; this._AP.servers=[]; this._AP.serverIndex=0; this._AP.log=[];
         this.navRoute=[]; this.navRouteIndex=0; this.navPath=[]; this.navigateTarget=null;
         this._sendMovement(0,0); this.apLog('Auto Patrol STOPPED');
     }
@@ -1203,13 +1204,13 @@ class BotSession {
         console.log(`${tag} [AP] apStart called: active=${this._AP.active} state=${this._AP.state} servers=${servers?.length}`);
         if(this._AP.active) this.apStop();
         this._AP.active=true; this._AP.servers=servers||[];
-        this._AP.pinkyFailCount=0; this._AP.moveDeathCount=0;
+        this._AP.pinkyFailCount=0;
         this._AP.state='next_server';
         const um=this.serverUrl.match(/s-([a-z]+)-([a-z]+)\./);
         if(um){const idx=this._AP.servers.findIndex(s=>s.region===um[1]&&s.biome===um[2]);this._AP.serverIndex=idx>=0?idx:0;}
         else this._AP.serverIndex=0;
         this.apLog(`Auto Patrol STARTED: ${this._AP.servers.length} servers, starting at ${this._AP.serverIndex}`);
-        this._sendDirectMapData({type:'auto-patrol',session:this._currentSessionId,state:this._AP.state,pinkyFailCount:this._AP.pinkyFailCount,moveDeathCount:this._AP.moveDeathCount,active:this._AP.active,currentServer:this._AP.servers[this._AP.serverIndex]||null,serverIndex:this._AP.serverIndex,serverCount:this._AP.servers.length,log:this._AP.log.slice(-10)});
+        this._sendDirectMapData({type:'auto-patrol',session:this._currentSessionId,state:this._AP.state,pinkyFailCount:this._AP.pinkyFailCount,active:this._AP.active,currentServer:this._AP.servers[this._AP.serverIndex]||null,serverIndex:this._AP.serverIndex,serverCount:this._AP.servers.length,log:this._AP.log.slice(-10)});
         this._fetchRoutes().then(()=>{console.log(`${tag} [AP] routes fetched, calling apAdvance`);this.apAdvance();}).catch(()=>{this.apLog('Route fetch failed');this.apAdvance();});
     }
     _fetchRoutes() {
@@ -1264,7 +1265,7 @@ class BotSession {
             }
             else{this._AP.state='wait_pinky';this.apLog(`Waiting for pinky`);}
         } else if(this._AP.state==='move_build'){
-            this._AP.state='patrolling'; this._AP.pinkyFailCount=0; this._AP.moveDeathCount=0;
+            this._AP.state='patrolling'; this._AP.pinkyFailCount=0;
             this.apLog(`Patrolling`);
             const srv=this._AP.servers[this._AP.serverIndex];
             if(srv?.waypoints?.length>0){this.navRoute=srv.waypoints;this.navRouteIndex=0;this.navigateTarget={x:srv.waypoints[0].x,y:srv.waypoints[0].y};this._computePath();}
@@ -1277,7 +1278,7 @@ class BotSession {
             this.apClearTimers(); this._AP.state='move_build';
             this.apLog(`Pinky detected, equipping move build`);
             this._equipBuild('loadouts/move.txt');
-            this._AP.state='patrolling'; this._AP.pinkyFailCount=0; this._AP.moveDeathCount=0;
+            this._AP.state='patrolling'; this._AP.pinkyFailCount=0;
             this.apLog(`Patrolling`);
             const srv=this._AP.servers[this._AP.serverIndex];
             if(srv?.waypoints?.length>0){this.navRoute=srv.waypoints;this.navRouteIndex=0;this.navigateTarget={x:srv.waypoints[0].x,y:srv.waypoints[0].y};this._computePath();}
@@ -1290,9 +1291,8 @@ class BotSession {
             this.apClearTimers(); this._AP.pinkyFailCount++;
             if(this._AP.pinkyFailCount>=3){this._AP.serverIndex++;this.apAdvance();}
         } else if(this._AP.state==='patrolling'){
-            this._AP.moveDeathCount++;
-            if(this._AP.moveDeathCount>=2){this.navRoute=[];this.navRouteIndex=0;this._AP.serverIndex++;this.apAdvance();}
-            else{this.navRoute=[];this.navRouteIndex=0;this.navPath=[];this.navigateTarget=null;this._AP.state='next_server';}
+            this.apLog('Death during patrol → next server');
+            this.navRoute=[];this.navRouteIndex=0;this._AP.serverIndex++;this.apAdvance();
         }
     }
     apOnRouteComplete() {
@@ -1319,7 +1319,7 @@ class BotSession {
         const mx=Math.max(10,Math.min(size-10,gridX*cellPx+cellPx/2));
         const my=Math.max(10,Math.min(size-10,gridY*cellPx+cellPx/2));
         ctx.beginPath(); ctx.arc(mx,my,5,0,Math.PI*2); ctx.fillStyle='#ffd700'; ctx.fill();
-        const vName=_VARIANT_NAMES[mob.variant]||'';
+        const vName=this._variantNames[mob.variant]||'';
         const rObj=this._rarities[mob.rarity];
         const label=`${mob.variant===0?'':vName+' '}${rObj?rObj.name:''} ${mob.name}`;
         ctx.font='bold 18px Ubuntu, monospace'; ctx.fillStyle='#ffd700'; ctx.textAlign='center';
@@ -1333,7 +1333,7 @@ class BotSession {
         const gridX=Math.floor(mob.x/cellSz), gridY=Math.floor(mob.y/cellSz);
         const um=this.serverUrl.match(/s-([a-z]+)-([a-z]+)\./);
         const region=um?um[1]:'', sbiome=um?um[2]:'';
-        const vName=_VARIANT_NAMES[mob.variant]||`V${mob.variant}`;
+        const vName=this._variantNames[mob.variant]||`V${mob.variant}`;
         const rObj=this._rarities[mob.rarity];
         const rName=rObj?rObj.name:`R${mob.rarity}`;
         const content=`<@&1473497061981683876> ${rName.toLowerCase()} ${mob.variant===0?'':vName.toLowerCase()+' '}${mob.name.toLowerCase()} ${region}-${sbiome} ${gridX} ${gridY}`;

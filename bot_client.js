@@ -159,7 +159,7 @@ function _flushBroadcast() {
 }
 
 // Discord webhook alert for tracked mobs
-const _VARIANT_NAMES = ['Normal','Magic','Arcane','Cursed','Shiny','Corrupt','Radiant','Giant','Tiny','Charged','Elemental','Angelic','Demonic','Bloody','Sweet','Paranormal','Flash','Boss'];
+let variantNames = [];
 
 function generateMobMapImage(mob, gridX, gridY) {
     if (!mapGrid || mapGrid.length === 0) return null;
@@ -183,7 +183,7 @@ function generateMobMapImage(mob, gridX, gridY) {
     ctx.arc(mx, my, 5, 0, Math.PI * 2);
     ctx.fillStyle = '#ffd700';
     ctx.fill();
-    const variantName = _VARIANT_NAMES[mob.variant] || '';
+    const variantName = variantNames[mob.variant] || '';
     const rarityObj = rarities[mob.rarity];
     const rarityName = rarityObj ? rarityObj.name : '';
     const variantPart = mob.variant === 0 ? '' : `${variantName} `;
@@ -200,7 +200,7 @@ function generateMobMapImage(mob, gridX, gridY) {
 
 function sendDiscordAlert(mob) {
     if (!trackingWebhookUrl) return;
-    const variantName = _VARIANT_NAMES[mob.variant] || `Variant_${mob.variant}`;
+    const variantName = variantNames[mob.variant] || `Variant_${mob.variant}`;
     const rarityObj = rarities[mob.rarity];
     const rarityName = rarityObj ? rarityObj.name : `Rarity_${mob.rarity}`;
     const cellSz = serverMapSize / gridWidth;
@@ -1504,7 +1504,6 @@ const _AP = {
     active: false,
     state: 'idle', // idle|pinky_build|wait_pinky|move_build|patrolling|next_server|route_check
     pinkyFailCount: 0,
-    moveDeathCount: 0,
     pinkyTimeout: null,
     servers: [],       // [{region, biome}, ...]
     serverIndex: 0,
@@ -1518,7 +1517,7 @@ function apLog(msg) {
     _AP.log.push(line);
     if (_AP.log.length > AP_LOG_MAX) _AP.log.shift();
     console.log(`\x1b[36m[AutoPatrol] ${msg}\x1b[0m`);
-    broadcastMapData({ type: 'auto-patrol', session: _currentSessionId, state: _AP.state, pinkyFailCount: _AP.pinkyFailCount, moveDeathCount: _AP.moveDeathCount, active: _AP.active, currentServer: _AP.servers[_AP.serverIndex] || null, serverIndex: _AP.serverIndex, serverCount: _AP.servers.length, log: _AP.log.slice(-10) });
+    broadcastMapData({ type: 'auto-patrol', session: _currentSessionId, state: _AP.state, pinkyFailCount: _AP.pinkyFailCount, active: _AP.active, currentServer: _AP.servers[_AP.serverIndex] || null, serverIndex: _AP.serverIndex, serverCount: _AP.servers.length, log: _AP.log.slice(-10) });
 }
 function apClearTimers() {
     if (_AP.pinkyTimeout) { clearTimeout(_AP.pinkyTimeout); _AP.pinkyTimeout = null; }
@@ -1541,7 +1540,6 @@ function apStop() {
     _AP.active = false;
     _AP.state = 'idle';
     _AP.pinkyFailCount = 0;
-    _AP.moveDeathCount = 0;
     _AP.servers = [];
     _AP.serverIndex = 0;
     _AP.log = [];
@@ -1557,7 +1555,6 @@ function apStart(servers) {
     _AP.active = true;
     _AP.servers = servers || [];
     _AP.pinkyFailCount = 0;
-    _AP.moveDeathCount = 0;
     // Start from the current biome if it exists in the server list
     const _uMatch = serverUrl.match(/s-([a-z]+)-([a-z]+)\./);
     if (_uMatch) {
@@ -1650,8 +1647,7 @@ function apOnSpawned() {
         // Spawned after move equip, start patrolling
         _AP.state = 'patrolling';
         _AP.pinkyFailCount = 0;
-        _AP.moveDeathCount = 0;
-        apLog(`Pinky fail counter reset. Patrolling route...`);
+        apLog(`Patrolling route...`);
         const srv = _AP.servers[_AP.serverIndex];
         if (srv && srv.waypoints && srv.waypoints.length > 0) {
             navRoute = srv.waypoints;
@@ -1675,7 +1671,6 @@ function apOnPinkyState(nowPinky) {
         // Start patrolling immediately without respawn
         _AP.state = 'patrolling';
         _AP.pinkyFailCount = 0;
-        _AP.moveDeathCount = 0;
         apLog('Patrolling route...');
         const srv = _AP.servers[_AP.serverIndex];
         if (srv && srv.waypoints && srv.waypoints.length > 0) {
@@ -1703,18 +1698,11 @@ function apOnDeath() {
         }
         // else: respawn will trigger apOnSpawned → pinky_build retry
     } else if (_AP.state === 'patrolling') {
-        _AP.moveDeathCount++;
-        apLog(`Death during patrol (${_AP.moveDeathCount}/5)`);
-        if (_AP.moveDeathCount >= 5) {
-            apLog('5 move deaths → next server');
-            navRoute = [];
-            navRouteIndex = 0;
-            _AP.serverIndex++;
-            apAdvance();
-        } else {
-            _AP.state = 'next_server';
-            // else: respawn will trigger apOnSpawned → pinky_build
-        }
+        apLog('Death during patrol → next server');
+        navRoute = [];
+        navRouteIndex = 0;
+        _AP.serverIndex++;
+        apAdvance();
     } else if (_AP.state === 'pinky_build' || _AP.state === 'move_build') {
         apLog('Death during build switch, will retry on respawn');
     }
@@ -3051,7 +3039,8 @@ async function init() {
         console.log(`  Petals: ${petalNames.length} entries`);
         console.log(`  Mobs:   ${mobNames.length} entries`);
         console.log(`  Rarities: ${rarities.length} entries`);
-        console.log(`  Variants: ${(gameData.variants || []).length} entries`);
+        variantNames = (gameData.variants || []).map(v => v.name);
+        console.log(`  Variants: ${variantNames.length} entries`);
         console.log(`  Snake Mobs: ${snakeMobIndices.size} detected`);
         console.log(`  Source: ${gameData.sourceUrl}\x1b[0m\n`);
 

@@ -652,7 +652,7 @@ const server = http.createServer((req, res) => {
     if (req.url === '/auto-patrol/status' && req.method === 'GET') {
         const statuses = {};
         for (const [id, session] of botSessions) {
-            statuses[id] = session.latestData['auto-patrol'] || { active: false, state: 'idle', pinkyFailCount: 0, moveDeathCount: 0, currentServer: null, serverIndex: 0, serverCount: 0, log: [] };
+            statuses[id] = session.latestData['auto-patrol'] || { active: false, state: 'idle', pinkyFailCount: 0, currentServer: null, serverIndex: 0, serverCount: 0, log: [] };
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(statuses));
@@ -677,7 +677,6 @@ const server = http.createServer((req, res) => {
                 serverIndex: status.serverIndex || 0,
                 serverCount: status.serverCount || 0,
                 pinkyFailCount: status.pinkyFailCount || 0,
-                moveDeathCount: status.moveDeathCount || 0,
                 log: (status.log || []).slice(-5),
             });
         }
