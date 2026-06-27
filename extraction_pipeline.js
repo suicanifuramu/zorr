@@ -289,118 +289,154 @@ function _parseAndInject(source) {
 function _scanSourceForVersion(source) {
     try {
         const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: 'script' });
-        // Build a map of variable name → literal numeric value
-        const varValues = new Map();
-        const collect = (node) => {
+        const FUNC_TYPES = new Set(['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression']);
+
+        // Walk from a node upward to find the tightest (nearest) enclosing function.
+        // We do this by scanning depth-first and keeping the LAST match (innermost).
+        function findEnclosingFunc(startPos) {
+            let result = null;
+            const walk = (node) => {
+                if (!node || typeof node !== 'object') return;
+                if (Array.isArray(node)) { for (const x of node) walk(x); return; }
+                if (FUNC_TYPES.has(node.type) && node.start <= startPos && node.end >= startPos) {
+                    result = node; // keep overwriting — last match is innermost
+                }
+                for (const k of Object.keys(node)) {
+                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
+                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                    walk(node[k]);
+                }
+            };
+            walk(ast);
+            return result;
+        }
+
+        // Collect numeric variable declarations walking up through all ancestor
+        // function scopes (var is function-scoped, so inner functions see outer vars).
+        function collectScopedVars(startPos) {
+            const vars = new Map();
+            const FUNC_TYPES_ARR = [...FUNC_TYPES];
+            // Walk the entire AST, collecting var/let/const declarations
+            // that are visible at startPos: declarations whose scope contains startPos.
+            const walk = (node) => {
+                if (!node || typeof node !== 'object') return;
+                if (Array.isArray(node)) { for (const x of node) walk(x); return; }
+                if (FUNC_TYPES.has(node.type)) {
+                    // Only enter functions whose range contains startPos
+                    if (node.start <= startPos && node.end >= startPos) {
+                        // Collect declarations in this function's body
+                        const body = node.body;
+                        if (body) {
+                            const collectInBody = (n) => {
+                                if (!n || typeof n !== 'object') return;
+                                if (Array.isArray(n)) { for (const x of n) collectInBody(x); return; }
+                                // Skip nested functions (they have their own scope)
+                                if (FUNC_TYPES.has(n.type) && n !== node) return;
+                                if (n.type === 'VariableDeclarator'
+                                    && n.id && n.id.type === 'Identifier'
+                                    && n.init && n.init.type === 'Literal'
+                                    && typeof n.init.value === 'number') {
+                                    if (!vars.has(n.id.name)) vars.set(n.id.name, n.init.value);
+                                }
+                                for (const k of Object.keys(n)) {
+                                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
+                                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                                    collectInBody(n[k]);
+                                }
+                            };
+                            collectInBody(body);
+                        }
+                    }
+                }
+                for (const k of Object.keys(node)) {
+                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
+                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                    walk(node[k]);
+                }
+            };
+            walk(ast);
+            return vars;
+        }
+
+        // Find DataView constructor nodes with their enclosing function scope
+        const dvEntries = []; // {name, startPos, scopedVars}
+        const findDV = (node) => {
             if (!node || typeof node !== 'object') return;
-            if (Array.isArray(node)) { for (const x of node) collect(x); return; }
+            if (Array.isArray(node)) { for (const x of node) findDV(x); return; }
             if (node.type === 'VariableDeclarator'
                 && node.id && node.id.type === 'Identifier'
-                && node.init && node.init.type === 'Literal'
-                && typeof node.init.value === 'number') {
-                varValues.set(node.id.name, node.init.value);
+                && node.init && node.init.type === 'NewExpression'
+                && node.init.callee && node.init.callee.type === 'Identifier'
+                && node.init.callee.name === 'DataView'
+                && node.init.arguments && node.init.arguments.length >= 1
+                && node.init.arguments[0] && node.init.arguments[0].type === 'NewExpression'
+                && node.init.arguments[0].callee && node.init.arguments[0].callee.type === 'Identifier'
+                && node.init.arguments[0].callee.name === 'ArrayBuffer') {
+                const scopedVars = collectScopedVars(node.start);
+                dvEntries.push({ name: node.id.name, startPos: node.start, scopedVars });
             }
             for (const k of Object.keys(node)) {
                 if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
                     || k === 'range' || k === 'raw' || k === 'comments') continue;
-                collect(node[k]);
+                findDV(node[k]);
             }
         };
-        collect(ast);
-        // Strategy 1: Find $N(0, <version>) — the setUint32 wrapper call.
-        // Also handles $N(dv, 0, <version>) by scanning all args.
-        let found = null;
-        const scan = (node) => {
-            if (found || !node || typeof node !== 'object') return;
-            if (Array.isArray(node)) { for (const x of node) scan(x); return; }
-            if (node.type === 'CallExpression'
-                && node.callee && node.callee.type === 'Identifier'
-                && /^\$/.test(node.callee.name)
-                && node.arguments.length >= 2) {
-                for (const arg of node.arguments) {
-                    if (arg.type === 'Literal' && typeof arg.value === 'number'
-                        && arg.value >= 420 && arg.value <= 460) {
-                        found = arg.value; return;
-                    }
-                    if (arg.type === 'Identifier' && varValues.has(arg.name)) {
-                        const v = varValues.get(arg.name);
-                        if (v >= 420 && v <= 460) { found = v; return; }
-                    }
-                }
-            }
-            for (const k of Object.keys(node)) {
-                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                    || k === 'range' || k === 'raw' || k === 'comments') continue;
-                scan(node[k]);
-            }
-        };
-        scan(ast);
-        if (found) return found;
+        findDV(ast);
 
-        // Strategy 2: Find DataView.setUint32(0, <version>) calls
-        // (the direct native call, not the $N wrapper).
-        let found2 = null;
-        const scan2 = (node) => {
-            if (found2 || !node || typeof node !== 'object') return;
-            if (Array.isArray(node)) { for (const x of node) scan2(x); return; }
-            if (node.type === 'CallExpression'
-                && node.callee && node.callee.type === 'MemberExpression'
-                && node.callee.object && node.callee.object.type === 'Identifier'
-                && node.callee.object.name === 'DataView'
-                && node.callee.property && node.callee.property.name === 'prototype'
-                && node.arguments && node.arguments.length >= 2) {
-                // DataView.prototype.setUint32.call(dv, offset, value, le)
-                for (const arg of node.arguments) {
-                    if (arg.type === 'Literal' && typeof arg.value === 'number'
-                        && arg.value >= 420 && arg.value <= 460) {
-                        found2 = arg.value; return;
-                    }
-                }
+        // For each DataView entry, find the handshake pattern:
+        // X.method(y++, ...) [setUint8] then X.method(y, version) [setUint32]
+        for (const entry of dvEntries) {
+            const scopedVars = entry.scopedVars;
+            function resolveArg(arg) {
+                if (!arg) return null;
+                if (arg.type === 'Literal' && typeof arg.value === 'number') return arg.value;
+                if (arg.type === 'Identifier' && scopedVars.has(arg.name)) return scopedVars.get(arg.name);
+                return null;
             }
-            for (const k of Object.keys(node)) {
-                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                    || k === 'range' || k === 'raw' || k === 'comments') continue;
-                scan2(node[k]);
-            }
-        };
-        scan2(ast);
-        if (found2) return found2;
 
-        // Strategy 3: Find any numeric literal in 420-460 range passed
-        // as an argument to a setUint32-like call (2+ args, first is 0 or dv).
-        // This catches renamed wrappers.
-        let found3 = null;
-        const scan3 = (node) => {
-            if (found3 || !node || typeof node !== 'object') return;
-            if (Array.isArray(node)) { for (const x of node) scan3(x); return; }
-            if (node.type === 'CallExpression'
-                && node.arguments && node.arguments.length >= 2) {
-                const firstArg = node.arguments[0];
-                // Check if first arg is 0 (byte offset) or a DataView/variable
-                const isFirstArgOk = (firstArg.type === 'Literal' && firstArg.value === 0)
-                    || (firstArg.type === 'Identifier' && varValues.has(firstArg.name) && varValues.get(firstArg.name) === 0)
-                    || (firstArg.type === 'Identifier');
-                if (isFirstArgOk) {
-                    for (const arg of node.arguments) {
-                        if (arg.type === 'Literal' && typeof arg.value === 'number'
-                            && arg.value >= 420 && arg.value <= 460) {
-                            found3 = arg.value; return;
-                        }
-                        if (arg.type === 'Identifier' && varValues.has(arg.name)) {
-                            const v = varValues.get(arg.name);
-                            if (v >= 420 && v <= 460) { found3 = v; return; }
+            let found = null;
+            const scan = (node, parent) => {
+                if (found || !node || typeof node !== 'object') return;
+                if (Array.isArray(node)) { for (const x of node) scan(x, node); return; }
+
+                if (node.type === 'CallExpression'
+                    && node.callee && node.callee.type === 'MemberExpression'
+                    && node.callee.object && node.callee.object.type === 'Identifier'
+                    && node.callee.object.name === entry.name
+                    && node.arguments && node.arguments.length >= 2) {
+                    const v = resolveArg(node.arguments[1]);
+                    if (v !== null && v >= 1 && v <= 1000) {
+                        if (parent && Array.isArray(parent)) {
+                            for (const sib of parent) {
+                                if (sib === node) continue;
+                                if (sib && sib.type === 'CallExpression'
+                                    && sib.callee && sib.callee.type === 'MemberExpression'
+                                    && sib.callee.object && sib.callee.object.type === 'Identifier'
+                                    && sib.callee.object.name === entry.name
+                                    && sib.arguments && sib.arguments.length >= 1) {
+                                    const hasUpdate = sib.arguments.some(a =>
+                                        a && (a.type === 'UpdateExpression'
+                                            || (a.type === 'SequenceExpression'
+                                                && a.expressions.some(e => e.type === 'UpdateExpression'))));
+                                    if (hasUpdate) {
+                                        found = v; return;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-            }
-            for (const k of Object.keys(node)) {
-                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                    || k === 'range' || k === 'raw' || k === 'comments') continue;
-                scan3(node[k]);
-            }
-        };
-        scan3(ast);
-        return found3;
+                for (const k of Object.keys(node)) {
+                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
+                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                    scan(node[k], node);
+                }
+            };
+            scan(ast, null);
+            if (found) return found;
+        }
+
+        return null;
     } catch (_) { return null; }
 }
 
@@ -552,7 +588,7 @@ async function _runVmStage({ injected, candidates, timeout }) {
         }
         for (const c of versionCands) {
             const v = captured[c.name];
-            if (typeof v === 'number' && v >= 420 && v <= 460) {
+            if (typeof v === 'number' && v >= 1 && v <= 1000) {
                 protocolVersion = v;
                 break;
             }

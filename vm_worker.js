@@ -97,7 +97,7 @@ async function _runVmJob({ injected, candidates, timeout, includeProtocol, hands
             for (const c of candidates) {
                 if (c.initKind !== 'version') continue;
                 const v = captured[c.name];
-                if (typeof v === 'number' && v >= 420 && v <= 460) {
+                if (typeof v === 'number' && v >= 1 && v <= 1000) {
                     protocolVersion = v;
                     break;
                 }
