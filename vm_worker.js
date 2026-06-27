@@ -64,9 +64,12 @@ async function _runVmJob({ injected, candidates, timeout, includeProtocol, hands
         sandboxApi.runScript(injected, { filename: 'zorr.js', timeout });
     } finally {
         process.off('unhandledRejection', onRej);
-        // P4: Restore prototype patches even if VM throws
-        if (typeof sandboxApi.cleanup === 'function') {
-            sandboxApi.cleanup();
+        // Restore Array/Map prototype patches immediately.
+        // DataView.prototype.setUint32 is deferred until after the
+        // handshake wait completes (game builds handshake in onopen
+        // which fires via setTimeout(10) AFTER runScript() returns).
+        if (typeof sandboxApi.cleanupPartial === 'function') {
+            sandboxApi.cleanupPartial();
         }
     }
     const vmRunMs = Date.now() - t0;
@@ -100,6 +103,11 @@ async function _runVmJob({ injected, candidates, timeout, includeProtocol, hands
                 }
             }
         }
+    }
+
+    // Now safe to restore DataView.prototype.setUint32
+    if (typeof sandboxApi.cleanup === 'function') {
+        sandboxApi.cleanup();
     }
 
     // P10: structured-clone-friendly serialization.

@@ -44,12 +44,14 @@ function createZorrSandbox(options = {}) {
             this.binaryType = 'arraybuffer';
             this._listeners = {};
             setTimeout(() => {
+                let onopenSucceeded = false;
                 try {
                     if (typeof this.onopen === 'function') {
                         this.onopen({ target: this, currentTarget: this });
                     }
+                    onopenSucceeded = true;
                 } catch (_) { /* swallow game onopen errors */ }
-                if (typeof hooks.onWebSocketOpen === 'function') {
+                if (onopenSucceeded && typeof hooks.onWebSocketOpen === 'function') {
                     try { hooks.onWebSocketOpen(this); } catch (_) { /* swallow */ }
                 }
             }, 10);
@@ -140,8 +142,10 @@ function createZorrSandbox(options = {}) {
         dataViewPatched = true;
     }
 
-    // P4: cleanup function to restore prototypes (prevent permanent side effects)
-    const cleanup = () => {
+    // P4: cleanup functions to restore prototypes (prevent permanent side effects)
+    // cleanupPartial: restore Array/Map immediately (no longer needed post-VM)
+    // cleanup: also restore DataView AFTER the handshake wait completes
+    const cleanupPartial = () => {
         if (arrayPatched) {
             Array.prototype.push = origArrayPush;
             arrayPatched = false;
@@ -150,6 +154,9 @@ function createZorrSandbox(options = {}) {
             Map.prototype.set = origMapSet;
             mapPatched = false;
         }
+    };
+    const cleanup = () => {
+        cleanupPartial();
         if (dataViewPatched) {
             DataView.prototype.setUint32 = origDataViewSetUint32;
             dataViewPatched = false;
@@ -307,7 +314,7 @@ function createZorrSandbox(options = {}) {
         }
     }
 
-    return { sandbox, ctx, MockWebSocket, runScript, captureFromGlobal, cleanup };
+    return { sandbox, ctx, MockWebSocket, runScript, captureFromGlobal, cleanup, cleanupPartial };
 }
 
 module.exports = { createZorrSandbox };

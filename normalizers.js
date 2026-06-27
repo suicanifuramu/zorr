@@ -34,11 +34,16 @@ function normalizeVariants(map) {
     if (!map || typeof map !== 'object') return [];
     const out = [];
     const seen = new Set();
-    for (let i = 0; i < (map.length || 0); i++) {
-        const name = map[i];
-        if (typeof name === 'string' && name.length > 0 && !seen.has(name)) {
-            seen.add(name);
-            out.push({ id: i, name });
+    // Enumerate ALL numeric-indexed entries via Object.keys() instead
+    // of relying on map.length which may be stale (e.g. the game adds
+    // entries post-construction without updating .length).
+    for (const k of Object.keys(map)) {
+        if (/^\d+$/.test(k)) {
+            const name = map[k];
+            if (typeof name === 'string' && name.length > 0 && !seen.has(name)) {
+                seen.add(name);
+                out.push({ id: parseInt(k, 10), name });
+            }
         }
     }
     return out;

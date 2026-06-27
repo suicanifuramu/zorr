@@ -307,15 +307,15 @@ function _scanSourceForVersion(source) {
             }
         };
         collect(ast);
-        // Find $48(0, <version>) — the setUint32 wrapper call.
-        // Also handles $48(dv, 0, <version>) by scanning all args.
+        // Strategy 1: Find $N(0, <version>) — the setUint32 wrapper call.
+        // Also handles $N(dv, 0, <version>) by scanning all args.
         let found = null;
         const scan = (node) => {
             if (found || !node || typeof node !== 'object') return;
             if (Array.isArray(node)) { for (const x of node) scan(x); return; }
             if (node.type === 'CallExpression'
                 && node.callee && node.callee.type === 'Identifier'
-                && node.callee.name === '$48'
+                && /^\$/.test(node.callee.name)
                 && node.arguments.length >= 2) {
                 for (const arg of node.arguments) {
                     if (arg.type === 'Literal' && typeof arg.value === 'number'
@@ -335,7 +335,72 @@ function _scanSourceForVersion(source) {
             }
         };
         scan(ast);
-        return found;
+        if (found) return found;
+
+        // Strategy 2: Find DataView.setUint32(0, <version>) calls
+        // (the direct native call, not the $N wrapper).
+        let found2 = null;
+        const scan2 = (node) => {
+            if (found2 || !node || typeof node !== 'object') return;
+            if (Array.isArray(node)) { for (const x of node) scan2(x); return; }
+            if (node.type === 'CallExpression'
+                && node.callee && node.callee.type === 'MemberExpression'
+                && node.callee.object && node.callee.object.type === 'Identifier'
+                && node.callee.object.name === 'DataView'
+                && node.callee.property && node.callee.property.name === 'prototype'
+                && node.arguments && node.arguments.length >= 2) {
+                // DataView.prototype.setUint32.call(dv, offset, value, le)
+                for (const arg of node.arguments) {
+                    if (arg.type === 'Literal' && typeof arg.value === 'number'
+                        && arg.value >= 420 && arg.value <= 460) {
+                        found2 = arg.value; return;
+                    }
+                }
+            }
+            for (const k of Object.keys(node)) {
+                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
+                    || k === 'range' || k === 'raw' || k === 'comments') continue;
+                scan2(node[k]);
+            }
+        };
+        scan2(ast);
+        if (found2) return found2;
+
+        // Strategy 3: Find any numeric literal in 420-460 range passed
+        // as an argument to a setUint32-like call (2+ args, first is 0 or dv).
+        // This catches renamed wrappers.
+        let found3 = null;
+        const scan3 = (node) => {
+            if (found3 || !node || typeof node !== 'object') return;
+            if (Array.isArray(node)) { for (const x of node) scan3(x); return; }
+            if (node.type === 'CallExpression'
+                && node.arguments && node.arguments.length >= 2) {
+                const firstArg = node.arguments[0];
+                // Check if first arg is 0 (byte offset) or a DataView/variable
+                const isFirstArgOk = (firstArg.type === 'Literal' && firstArg.value === 0)
+                    || (firstArg.type === 'Identifier' && varValues.has(firstArg.name) && varValues.get(firstArg.name) === 0)
+                    || (firstArg.type === 'Identifier');
+                if (isFirstArgOk) {
+                    for (const arg of node.arguments) {
+                        if (arg.type === 'Literal' && typeof arg.value === 'number'
+                            && arg.value >= 420 && arg.value <= 460) {
+                            found3 = arg.value; return;
+                        }
+                        if (arg.type === 'Identifier' && varValues.has(arg.name)) {
+                            const v = varValues.get(arg.name);
+                            if (v >= 420 && v <= 460) { found3 = v; return; }
+                        }
+                    }
+                }
+            }
+            for (const k of Object.keys(node)) {
+                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
+                    || k === 'range' || k === 'raw' || k === 'comments') continue;
+                scan3(node[k]);
+            }
+        };
+        scan3(ast);
+        return found3;
     } catch (_) { return null; }
 }
 
@@ -346,6 +411,7 @@ function _scanSourceForVersion(source) {
  */
 function _classifyCaptured(captured, candidates) {
     const classified = { rarity: null, variant: null, petal: null, mob: null, biomeMobs: null };
+    const classifiedSizes = { variant: 0, petal: 0, mob: 0, biomeMobs: 0 };
     for (const c of candidates) {
         if (classified.rarity && classified.variant && classified.petal && classified.mob && classified.biomeMobs) break;
         const v = captured[c.name];
@@ -356,6 +422,17 @@ function _classifyCaptured(captured, candidates) {
         }
         if (result && !classified[result.kind]) {
             classified[result.kind] = result.items;
+            if (result.kind in classifiedSizes) {
+                classifiedSizes[result.kind] = Array.isArray(result.items) ? result.items.length
+                    : (result.items && typeof result.items === 'object' ? Object.keys(result.items).length : 0);
+            }
+        } else if (result && result.kind in classifiedSizes) {
+            const newSize = Array.isArray(result.items) ? result.items.length
+                : (result.items && typeof result.items === 'object' ? Object.keys(result.items).length : 0);
+            if (newSize > classifiedSizes[result.kind]) {
+                classified[result.kind] = result.items;
+                classifiedSizes[result.kind] = newSize;
+            }
         }
     }
     return classified;
@@ -374,6 +451,7 @@ async function _runVmStage({ injected, candidates, timeout }) {
     let getHandshakeState;
     let protocolVersion = null;
     let handshakeReceived = false;
+    let _deferredCleanup = null;
 
     if (_useWorker) {
         // Worker path: VM runs in a separate thread. The captured values
@@ -425,9 +503,13 @@ async function _runVmStage({ injected, candidates, timeout }) {
             sandboxApi.runScript(injected, { filename: 'zorr.js', timeout });
         } finally {
             process.off('unhandledRejection', onRej);
-            // P4: Restore prototype patches even if VM throws
-            if (typeof sandboxApi.cleanup === 'function') {
-                sandboxApi.cleanup();
+            // P4: Restore Array/Map prototype patches immediately.
+            // DataView.prototype.setUint32 is deferred until after the
+            // handshake wait completes (the game builds the handshake
+            // inside MockWebSocket.onopen which fires via setTimeout(10)
+            // AFTER runScript() returns).
+            if (typeof sandboxApi.cleanupPartial === 'function') {
+                sandboxApi.cleanupPartial();
             }
         }
         vmRunMs = Date.now() - t0;
@@ -447,6 +529,12 @@ async function _runVmStage({ injected, candidates, timeout }) {
             handshakeReceived,
             protocolVersion,
         });
+        // Expose cleanup for deferred DataView prototype restoration
+        _deferredCleanup = () => {
+            if (typeof sandboxApi.cleanup === 'function') {
+                sandboxApi.cleanup();
+            }
+        };
     }
 
     const classified = _classifyCaptured(captured, candidates);
@@ -471,7 +559,7 @@ async function _runVmStage({ injected, candidates, timeout }) {
         }
     }
 
-    return { captured, classified, vmRunMs, getHandshakeState };
+    return { captured, classified, vmRunMs, getHandshakeState, deferredCleanup: _deferredCleanup };
 }
 
 /** Stage 4: wait for the WebSocket handshake (one-shot, hard cap). */
@@ -536,7 +624,7 @@ async function runFullExtraction({
     const { candidates, injected } = _parseAndInject(source);
 
     // Stage 3: VM + classify (one-shot; async due to P10 worker support)
-    const { captured, classified, vmRunMs, getHandshakeState } = await _runVmStage({
+    const { captured, classified, vmRunMs, getHandshakeState, deferredCleanup } = await _runVmStage({
         injected, candidates, timeout,
     });
 
@@ -625,6 +713,10 @@ async function runFullExtraction({
         getHandshakeState,
         { includeProtocol, handshakeMaxWaitMs }
     );
+
+    // Now safe to restore DataView.prototype.setUint32 (the handshake
+    // wait is complete; the game's onopen has already fired).
+    if (typeof deferredCleanup === 'function') deferredCleanup();
 
     // Stage 4b: static source scan fallback if handshake didn't yield a version
     if (protocolVersion === null && includeProtocol) {

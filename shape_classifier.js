@@ -27,12 +27,14 @@ const SNAKE_PROP_NAMES = [
 
 function isVariantMap(obj) {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-    if (typeof obj.length !== 'number' || obj.length < 15) return false;
-    // M({...}) result has sequential numeric keys (0..N-1) with string values
-    for (let i = 0; i < obj.length; i++) {
-        if (typeof obj[i] !== 'string') return false;
+    // Count numeric-indexed string entries via Object.keys() instead
+    // of relying on obj.length which may be stale (e.g. the game adds
+    // entries post-construction without updating .length).
+    let count = 0;
+    for (const k of Object.keys(obj)) {
+        if (/^\d+$/.test(k) && typeof obj[k] === 'string') count++;
     }
-    return true;
+    return count >= 15;
 }
 
 function isRarityTupleArray(items) {
