@@ -1040,7 +1040,10 @@ class BotSession {
         const checkX=cx+(desiredVX>0.3?1:desiredVX<-0.3?-1:0);
         const checkY=cy+(desiredVY>0.3?1:desiredVY<-0.3?-1:0);
         const rows=this.mapGrid.length,cols=this.mapGrid[0].length;
-        if(checkX>=0&&checkX<cols&&checkY>=0&&checkY<rows&&this.mapGrid[checkY][checkX]===1)return{vx:desiredVX,vy:desiredVY};
+        if(checkX>=0&&checkX<cols&&checkY>=0&&checkY<rows&&this.mapGrid[checkY][checkX]===1){
+            const dcx=checkX-cx,dcy=checkY-cy;
+            if(dcx===0||dcy===0||(this.mapGrid[cy][checkX]===1&&this.mapGrid[checkY][cx]===1))return{vx:desiredVX,vy:desiredVY};
+        }
         const dirs=[[1,0],[0,1],[-1,0],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
         let bestDot=-Infinity, bestDir=null;
         for(const [dx,dy] of dirs){

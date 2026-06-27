@@ -2021,9 +2021,12 @@ function _wallAwareMove(desiredVX, desiredVY, cx, cy) {
     const checkY = cy + (desiredVY > 0.3 ? 1 : desiredVY < -0.3 ? -1 : 0);
     const rows = mapGrid.length, cols = mapGrid[0].length;
 
-    // If no wall in direct path, use it
+    // If no wall in direct path, use it (with corner-cutting prevention for diagonal moves)
     if (checkX >= 0 && checkX < cols && checkY >= 0 && checkY < rows && mapGrid[checkY][checkX] === 1) {
-        return { vx: desiredVX, vy: desiredVY };
+        const dcx = checkX - cx, dcy = checkY - cy;
+        if (dcx === 0 || dcy === 0 || (mapGrid[cy][checkX] === 1 && mapGrid[checkY][cx] === 1)) {
+            return { vx: desiredVX, vy: desiredVY };
+        }
     }
 
     // Wall detected: find best alternative direction that's walkable and closest to desired
