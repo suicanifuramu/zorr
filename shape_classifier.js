@@ -20,14 +20,6 @@
  * the constructor depends on DOM/window globals (gr/hp/tw/tz/O5) that
  * can't be mocked safely in the sandbox.
  */
-const VARIANT_NAMES = [
-    'Normal', 'Magic', 'Arcane', 'Cursed', 'Shiny', 'Corrupt',
-    'Radiant', 'Giant', 'Tiny', 'Charged', 'Elemental', 'Angelic',
-    'Demonic', 'Bloody', 'Sweet', 'Paranormal', 'Flash', 'Boss',
-];
-
-// Primary indicator: snakeCount (number > 0). Phase A confirmed.
-// Secondary indicators kept for safety in case the game renames it.
 const SNAKE_PROP_NAMES = [
     'snakeCount', 'snakeBodyCount', 'bodyPartCount', 'segmentCount',
     'segments', 'bodyParts', 'serpentLength',
@@ -35,13 +27,12 @@ const SNAKE_PROP_NAMES = [
 
 function isVariantMap(obj) {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
-    // M({...}) result has both numeric keys (0..N-1) and string keys
-    // At least most variant names must be present
-    let match = 0;
-    for (const name of VARIANT_NAMES) {
-        if (name in obj) match++;
+    if (typeof obj.length !== 'number' || obj.length < 15) return false;
+    // M({...}) result has sequential numeric keys (0..N-1) with string values
+    for (let i = 0; i < obj.length; i++) {
+        if (typeof obj[i] !== 'string') return false;
     }
-    return match >= 15 && typeof obj.length === 'number' && obj.length >= 15;
+    return true;
 }
 
 function isRarityTupleArray(items) {
@@ -145,5 +136,4 @@ module.exports = {
     isBiomeMobMap,
     detectSnakeProp,
     SNAKE_PROP_NAMES,
-    VARIANT_NAMES,
 };

@@ -5,7 +5,7 @@
  * with no VM/fetch/cache concerns — extracted here to avoid a circular
  * dependency between extraction_pipeline and game_data_extractor.
  */
-const { VARIANT_NAMES, detectSnakeProp } = require('./shape_classifier');
+const { detectSnakeProp } = require('./shape_classifier');
 
 function slugify(name) {
     if (typeof name !== 'string') return '';
@@ -39,12 +39,6 @@ function normalizeVariants(map) {
         if (typeof name === 'string' && name.length > 0 && !seen.has(name)) {
             seen.add(name);
             out.push({ id: i, name });
-        }
-    }
-    // Fallback: if no numeric-indexed names, use known list
-    if (out.length === 0) {
-        for (let i = 0; i < VARIANT_NAMES.length; i++) {
-            out.push({ id: i, name: VARIANT_NAMES[i] });
         }
     }
     return out;

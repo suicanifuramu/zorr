@@ -12,7 +12,7 @@
  *     mob's `snakeCount` property (Phase A verified).
  */
 const { getOrComputeExtraction, runFullExtraction, extractSnakeIndicesFromRaw } = require('./extraction_pipeline');
-const { detectSnakeProp, SNAKE_PROP_NAMES, VARIANT_NAMES } = require('./shape_classifier');
+const { detectSnakeProp, SNAKE_PROP_NAMES } = require('./shape_classifier');
 const {
     slugify,
     normalizeRarities,
