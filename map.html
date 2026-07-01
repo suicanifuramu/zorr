@@ -2402,7 +2402,7 @@
             const countEl = document.getElementById('ping-mob-count');
             const moreBtn = document.getElementById('ping-mob-more');
             if (!el) return;
-            const hasPendingAny = pingRules.rules.some(r => !r.slug && !r.roleId);
+            const hasAnyRule = pingRules.rules.some(r => !r.slug);
             const allSlugs = getFilteredMobSlugs();
             const show = pingExpanded ? allSlugs : allSlugs.slice(0, 20);
             const anyDisabled = '';
@@ -2411,14 +2411,13 @@
                 if (allSlugs.length <= 20) { moreBtn.style.display = 'none'; }
                 else { moreBtn.style.display = 'block'; moreBtn.textContent = pingExpanded ? 'Show Less' : `Show All (${allSlugs.length} mobs)`; }
             }
-            const anyChecked = hasPendingAny ? ' checked' : '';
+            const anyChecked = hasAnyRule ? ' checked' : '';
             let html = `<label class="ping-mob-label ping-mob-any"><input type="checkbox" class="ping-mob-checkbox" data-slug=""${anyChecked}${anyDisabled}> (Any Mob - variant/rarity only)</label>`;
 
             html += show.map(slug => {
                 const mob = MOB_BY_SLUG[slug];
                 const name = (mob?.name || slug).replace(/_/g, ' ');
-                const checked = pingRules.rules.some(r => r.slug === slug) ? ' checked' : '';
-                return `<label class="ping-mob-label"><input type="checkbox" class="ping-mob-checkbox" data-slug="${slug}"${checked}> ${name}</label>`;
+                return `<label class="ping-mob-label"><input type="checkbox" class="ping-mob-checkbox" data-slug="${slug}"> ${name}</label>`;
             }).join('');
             el.innerHTML = html;
         }
@@ -2548,7 +2547,7 @@
                         pingRules.rules.push({ slug: '', variants: [], rarities: [] });
                     }
                 } else {
-                    pingRules.rules = pingRules.rules.filter(r => r.slug !== '' || r.roleId);
+                    pingRules.rules = pingRules.rules.filter(r => r.slug !== '');
                 }
                 renderPingMobList();
                 return;
