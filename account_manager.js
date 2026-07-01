@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { BotSession } = require('./bot_session');
 const { extractProtocolVersion } = require('./protocol_extractor');
 

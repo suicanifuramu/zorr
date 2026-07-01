@@ -1368,14 +1368,15 @@ class BotSession {
         return canvas.toBuffer('image/png');
     }
     _sendDiscordAlert(mob) {
-        if(!this.botToken)return;
+        const _tag=`[${this.accountId.slice(0,8)}]`;
+        if(!this.botToken){console.log(`${_tag} [Discord] Skip: no botToken`);return;}
         const cellSz=this.serverMapSize/this.gridWidth;
         const gridX=Math.floor(mob.x/cellSz), gridY=Math.floor(mob.y/cellSz);
         const um=this.serverUrl.match(/s-([a-z]+)-([a-z]+)\./);
         const region=um?um[1]:'', sbiome=um?um[2]:'';
-        // Resolve channel ID: specific biome → default → skip
-        const channelId = (this.biomeChannels.biomes && this.biomeChannels.biomes[sbiome]) || this.biomeChannels.defaultChannelId;
-        if (!channelId) return;
+        const channelId=(this.biomeChannels.biomes&&this.biomeChannels.biomes[sbiome])||this.biomeChannels.defaultChannelId;
+        if(!channelId){console.log(`${_tag} [Discord] Skip: no channel for biome=${sbiome} default=${this.biomeChannels.defaultChannelId}`);return;}
+        console.log(`${_tag} [Discord] Sending: ${mob.slug} variant=${mob.variant} rarity=${mob.rarity} to channel=${channelId}`);
         const vName=this._variantNames[mob.variant]||`V${mob.variant}`;
         const rObj=this._rarities[mob.rarity];
         const rName=rObj?rObj.name:`R${mob.rarity}`;
