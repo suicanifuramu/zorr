@@ -1172,6 +1172,7 @@
             MOB_BY_SLUG = {};
             for (const m of (cfg.mobs || [])) MOB_BY_SLUG[m.slug] = m;
             BIOME_MOBS = cfg.biomeMobs || {};
+            CONFIG_BIOMES = cfg.biomes || [];
             // Compute "other" tab: mobs not in any biome
             const allBiomeSlugs = new Set();
             for (const slugs of Object.values(BIOME_MOBS)) {
@@ -1220,6 +1221,7 @@
         let TALENT_BY_SLUG = {};
         let MOB_BY_SLUG = {};
         let BIOME_MOBS = {};
+        let CONFIG_BIOMES = [];
 
         // Connect to SSE
         const eventSource = new EventSource('/events');
@@ -2524,12 +2526,11 @@
             const defInput = document.getElementById('biome-default-channel');
             if (!el || !defInput) return;
             defInput.value = biomeChannels.defaultChannelId || '';
-            const biomes = Array.isArray(gameConfig && gameConfig.biomes) ? gameConfig.biomes : [];
-            if (biomes.length === 0) {
+            if (CONFIG_BIOMES.length === 0) {
                 el.innerHTML = '<div style="color:#6b7280;font-size:11px;text-align:center;padding:12px;">Load game config first</div>';
                 return;
             }
-            el.innerHTML = biomes.map(b => {
+            el.innerHTML = CONFIG_BIOMES.map(b => {
                 const val = (biomeChannels.biomes && biomeChannels.biomes[b.slug]) || '';
                 return `<div class="ping-rule-item">
                     <span style="color:#00ffcc;font-weight:bold;font-size:11px;min-width:80px;">${b.name}</span>
