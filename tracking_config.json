@@ -330,9 +330,15 @@
     },
     {
       "slug": "bubble",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "electric_eel",
@@ -1050,7 +1056,7 @@
     },
     {
       "slug": "bacteriophage",
-      "enabled": true,
+      "enabled": false,
       "variants": [
         1,
         2
@@ -1169,8 +1175,8 @@
       "slug": "troll",
       "enabled": true,
       "variants": [
-        1,
-        2
+        2,
+        6
       ],
       "rarities": [
         8,
@@ -1251,8 +1257,30 @@
     {
       "slug": "ufo",
       "enabled": false,
-      "variants": [],
-      "rarities": []
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "white_hole",
@@ -1413,9 +1441,15 @@
     },
     {
       "slug": "meteor",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "pterodactyl",
@@ -1425,7 +1459,7 @@
     },
     {
       "slug": "tyrannosaurus",
-      "enabled": true,
+      "enabled": false,
       "variants": [
         0,
         1,
@@ -1464,7 +1498,7 @@
     },
     {
       "slug": "elasmosaurus",
-      "enabled": true,
+      "enabled": false,
       "variants": [
         0,
         1,
@@ -1491,7 +1525,7 @@
     },
     {
       "slug": "nigersaurus",
-      "enabled": true,
+      "enabled": false,
       "variants": [
         0,
         1,
