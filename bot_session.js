@@ -126,9 +126,24 @@ function decodeBuildCode(b64) {
 }
 
 class BotSession {
-    constructor(accountId, sharedData, botName, buildNumber = null) {
+    constructor(accountId, sharedData, botName, buildNumber = null, proxyUrl = null) {
         this.accountId = accountId;
         this._buildNumber = buildNumber;
+        this.proxyUrl = proxyUrl;
+        this.proxyAgent = null;
+        if (proxyUrl) {
+            try {
+                if (proxyUrl.startsWith('socks')) {
+                    const { SocksProxyAgent } = require('socks-proxy-agent');
+                    this.proxyAgent = new SocksProxyAgent(proxyUrl);
+                } else if (proxyUrl.startsWith('http')) {
+                    const { HttpsProxyAgent } = require('https-proxy-agent');
+                    this.proxyAgent = new HttpsProxyAgent(proxyUrl);
+                }
+            } catch (e) {
+                console.log(`[${this.accountId.slice(0,8)}] [Proxy] Agent creation failed: ${e.message}`);
+            }
+        }
         this.botName = botName || '';
         this.serverUrl = 'wss://s-us-plains.zorr.pro/';
 
@@ -287,10 +302,15 @@ class BotSession {
         const myCounter = this._connectCounter;
         const tag = `[${this.accountId.slice(0,8)}]`;
         console.log(`${tag} [Bot] Connecting to ${this.serverUrl}... (gen=${myEpoch}:${myCounter})`);
-        this.ws = new WebSocket(this.serverUrl, {
+        const wsOptions = {
             origin: 'https://zorr.pro',
             headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-        });
+        };
+        if (this.proxyAgent) {
+            wsOptions.agent = this.proxyAgent;
+            console.log(`${tag} [Bot] Using proxy: ${this.proxyUrl}`);
+        }
+        this.ws = new WebSocket(this.serverUrl, wsOptions);
         this.ws.on('open', () => { this._sendHandshake(); });
         this.ws.on('message', (data) => { this._handleMessage(new Uint8Array(data)); });
         this.ws.on('close', (code, reason) => {

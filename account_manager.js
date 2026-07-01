@@ -64,6 +64,43 @@ async function loadGameData() {
     return { petalNames, slugToId, mobNames, mobSlugs, snakeMobIndices, rarities, variants, PINKY_BITMASK, protocolVersion };
 }
 
+// ── Read proxies from file ──
+function readProxies(filePath) {
+    if (!fs.existsSync(filePath)) return [];
+    const content = fs.readFileSync(filePath, 'utf8');
+    return content.split('\n')
+        .map(line => line.trim())
+        .filter(line => line && !line.startsWith('#'))
+        .map(line => {
+            const match = line.match(/^(\w+):\/\/([^:]+):(\d+)$/);
+            if (!match) return null;
+            return { url: line, protocol: match[1], host: match[2], port: parseInt(match[3], 10) };
+        })
+        .filter(p => p !== null);
+}
+
+// ── Distribute accounts across proxies ──
+function distributeAccounts(accounts, proxies) {
+    const result = [];
+    if (!proxies.length) {
+        for (const a of accounts) result.push({ ...a, proxy: null });
+        return result;
+    }
+    const directCount = Math.ceil(accounts.length / (proxies.length + 1));
+    let idx = 0;
+    for (let i = 0; i < directCount && idx < accounts.length; i++, idx++)
+        result.push({ ...accounts[idx], proxy: null });
+    const remaining = accounts.length - directCount;
+    const perProxy = Math.floor(remaining / proxies.length);
+    const extra = remaining % proxies.length;
+    for (let p = 0; p < proxies.length; p++) {
+        const count = perProxy + (p < extra ? 1 : 0);
+        for (let j = 0; j < count; j++, idx++)
+            result.push({ ...accounts[idx], proxy: proxies[p] });
+    }
+    return result;
+}
+
 // ── Read accounts from file ──
 function readAccounts(filePath) {
     const content = fs.readFileSync(filePath, 'utf8');
@@ -129,6 +166,23 @@ async function main() {
         console.log(`  ${i + 1}. ${entry.id}${buildTag}`);
     });
 
+    // Read proxies
+    const proxiesPath = path.join(__dirname, 'proxies.txt');
+    const proxies = readProxies(proxiesPath);
+    console.log(`[AccountManager] Found ${proxies.length} proxies`);
+    if (proxies.length > 0) {
+        proxies.forEach((p, i) => console.log(`  Proxy ${i + 1}: ${p.protocol}://${p.host}:${p.port}`));
+    }
+
+    // Distribute accounts across proxies
+    const distributed = distributeAccounts(accountIds, proxies);
+    console.log(`[AccountManager] Account distribution:`);
+    distributed.forEach((entry, i) => {
+        const buildTag = entry.buildNumber ? `:${entry.buildNumber}` : '';
+        const proxyTag = entry.proxy ? ` via ${entry.proxy.url}` : ' (direct)';
+        console.log(`  ${i + 1}. ${entry.id}${buildTag}${proxyTag}`);
+    });
+
     // Fetch server list
     let servers;
     try {
@@ -148,13 +202,15 @@ async function main() {
 
     // Create and start BotSessions
     const sessions = [];
-    for (let i = 0; i < accountIds.length; i++) {
-        const entry = accountIds[i];
+    for (let i = 0; i < distributed.length; i++) {
+        const entry = distributed[i];
         const accountId = entry.id;
-        const session = new BotSession(accountId, sharedData, null, entry.buildNumber);
+        const proxyUrl = entry.proxy ? entry.proxy.url : null;
+        const session = new BotSession(accountId, sharedData, null, entry.buildNumber, proxyUrl);
         sessions.push(session);
         const buildTag = entry.buildNumber ? ` (build${entry.buildNumber})` : '';
-        console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}`);
+        const proxyTag = entry.proxy ? ` [proxy: ${entry.proxy.url}]` : '';
+        console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}${proxyTag}`);
         session.start(distributions[i]);
     }
 
