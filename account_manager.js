@@ -69,7 +69,15 @@ function readAccounts(filePath) {
     const content = fs.readFileSync(filePath, 'utf8');
     return content.split('\n')
         .map(line => line.trim())
-        .filter(line => line && !line.startsWith('#'));
+        .filter(line => line && !line.startsWith('#'))
+        .map(line => {
+            const parts = line.split(':');
+            const id = parts[0].trim();
+            const buildNumber = parts.length >= 2 && /^\d+$/.test(parts[1])
+                ? parseInt(parts[1], 10)
+                : null;
+            return { id, buildNumber };
+        });
 }
 
 // ── Fetch server list from map_server ──
@@ -116,7 +124,10 @@ async function main() {
         process.exit(1);
     }
     console.log(`[AccountManager] Found ${accountIds.length} accounts:`);
-    accountIds.forEach((id, i) => console.log(`  ${i + 1}. ${id}`));
+    accountIds.forEach((entry, i) => {
+        const buildTag = entry.buildNumber ? `:${entry.buildNumber}` : '';
+        console.log(`  ${i + 1}. ${entry.id}${buildTag}`);
+    });
 
     // Fetch server list
     let servers;
@@ -132,16 +143,18 @@ async function main() {
     // Distribute servers
     const distributions = distributeServers(servers, accountIds.length);
     for (let i = 0; i < accountIds.length; i++) {
-        console.log(`[AccountManager] Account ${accountIds[i].slice(0, 8)}: ${distributions[i].length} servers`);
+        console.log(`[AccountManager] Account ${accountIds[i].id.slice(0, 8)}: ${distributions[i].length} servers`);
     }
 
     // Create and start BotSessions
     const sessions = [];
     for (let i = 0; i < accountIds.length; i++) {
-        const accountId = accountIds[i];
-        const session = new BotSession(accountId, sharedData);
+        const entry = accountIds[i];
+        const accountId = entry.id;
+        const session = new BotSession(accountId, sharedData, null, entry.buildNumber);
         sessions.push(session);
-        console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...`);
+        const buildTag = entry.buildNumber ? ` (build${entry.buildNumber})` : '';
+        console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}`);
         session.start(distributions[i]);
     }
 

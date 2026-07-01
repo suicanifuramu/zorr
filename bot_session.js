@@ -126,8 +126,9 @@ function decodeBuildCode(b64) {
 }
 
 class BotSession {
-    constructor(accountId, sharedData, botName) {
+    constructor(accountId, sharedData, botName, buildNumber = null) {
         this.accountId = accountId;
+        this._buildNumber = buildNumber;
         this.botName = botName || '';
         this.serverUrl = 'wss://s-us-plains.zorr.pro/';
 
@@ -243,6 +244,15 @@ class BotSession {
         this._broadcastBuffer = {};
         this._broadcastTimer = null;
         this._broadcastDown = false;
+    }
+
+    // ── Build file resolution ──
+    _resolveBuildPath(baseName) {
+        if (this._buildNumber) {
+            const numberedPath = path.join(__dirname, `loadouts/${baseName}${this._buildNumber}.txt`);
+            if (fs.existsSync(numberedPath)) return numberedPath;
+        }
+        return path.join(__dirname, `loadouts/${baseName}.txt`);
     }
 
     // ── Connection ──
@@ -491,7 +501,7 @@ class BotSession {
                 const build = decodeBuildCode(cmd.buildCode);
                 if (build) { if (cmd.talents && cmd.talents.length > 0) build.talents = cmd.talents; this._sendEquipLoadout(build); }
             } else {
-                const filePath = path.join(__dirname, cmd.buildFile || 'loadouts/move.txt');
+                const filePath = cmd.buildFile || this._resolveBuildPath('move');
                 const b64 = fs.readFileSync(filePath, 'utf8').trim();
                 const build = decodeBuildCode(b64);
                 if (build) { if (cmd.talents && cmd.talents.length > 0) build.talents = cmd.talents; this._sendEquipLoadout(build); }
@@ -499,8 +509,9 @@ class BotSession {
         } catch (e) { console.log(`[${this.accountId.slice(0,8)}] [Bot] Equip error: ${e.message}`); }
     }
 
-    _equipBuild(file) {
-        this._pendingEquipCmd = { action: 'equip', buildFile: file, buildCode: null, talents: null };
+    _equipBuild(baseName) {
+        const filePath = this._resolveBuildPath(baseName);
+        this._pendingEquipCmd = { action: 'equip', buildFile: filePath, buildCode: null, talents: null };
         this._processPendingEquip();
     }
 
@@ -1252,7 +1263,7 @@ class BotSession {
             this._AP.servers[this._AP.serverIndex].routeKey=routeKey;
             this._AP.state='pinky_build';
             this.apLog(`Equipping pinky build`);
-            this._equipBuild('loadouts/pinky.txt');
+            this._equipBuild('pinky');
             this.apClearTimers();
             this._AP.pinkyTimeout=setTimeout(()=>{
                 if(!this._AP.active||this._AP.state!=='wait_pinky')return;
@@ -1264,7 +1275,7 @@ class BotSession {
             if(this.isPinky){
                 this._AP.state='move_build';
                 this.apLog(`Pinky detected, equipping move build`);
-                this._equipBuild('loadouts/move.txt');
+                this._equipBuild('move');
             }
             else{this._AP.state='wait_pinky';this.apLog(`Waiting for pinky`);}
         } else if(this._AP.state==='move_build'){
@@ -1280,7 +1291,7 @@ class BotSession {
         if(this._AP.state==='wait_pinky'||this._AP.state==='pinky_build'){
             this.apClearTimers(); this._AP.state='move_build';
             this.apLog(`Pinky detected, equipping move build`);
-            this._equipBuild('loadouts/move.txt');
+            this._equipBuild('move');
             this._AP.state='patrolling'; this._AP.pinkyFailCount=0;
             this.apLog(`Patrolling`);
             const srv=this._AP.servers[this._AP.serverIndex];
