@@ -2443,7 +2443,8 @@
             document.querySelectorAll('#ping-mob-list .ping-mob-checkbox:checked').forEach(cb => {
                 if (cb.dataset.slug !== '') checkedSlugs.push(cb.dataset.slug);
             });
-            if (pingRules.rules.some(r => !r.slug && !r.roleId)) {
+            const anyCheckbox = document.querySelector('#ping-mob-list .ping-mob-checkbox[data-slug=""]');
+            if (anyCheckbox && anyCheckbox.checked) {
                 checkedSlugs.push('');
             }
             const roleId = document.getElementById('ping-role-id-input').value.trim();
@@ -2453,7 +2454,9 @@
             document.querySelectorAll('#ping-vars .ping-checkbox:checked').forEach(cb => variants.push(Number(cb.dataset.id)));
             document.querySelectorAll('#ping-rars .ping-checkbox:checked').forEach(cb => rarities.push(Number(cb.dataset.id)));
             for (const slug of checkedSlugs) {
-                pingRules.rules = pingRules.rules.filter(r => r.slug !== slug);
+                if (slug === '') {
+                    pingRules.rules = pingRules.rules.filter(r => r.slug !== '' || r.roleId);
+                }
                 pingRules.rules.push({ slug, variants, rarities, roleId });
             }
             renderPingRules();
@@ -2547,7 +2550,7 @@
                         pingRules.rules.push({ slug: '', variants: [], rarities: [] });
                     }
                 } else {
-                    pingRules.rules = pingRules.rules.filter(r => r.slug !== '');
+                    pingRules.rules = pingRules.rules.filter(r => r.slug !== '' || r.roleId);
                 }
                 renderPingMobList();
                 return;
