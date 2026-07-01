@@ -775,9 +775,15 @@
             border-radius: 4px;
             padding: 2px 0;
         }
-        .ping-mob-list-wrap::-webkit-scrollbar { width: 4px; }
-        .ping-mob-list-wrap::-webkit-scrollbar-track { background: transparent; }
-        .ping-mob-list-wrap::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .ping-mob-list-wrap::-webkit-scrollbar, #ping-rules-list::-webkit-scrollbar { width: 4px; }
+        .ping-mob-list-wrap::-webkit-scrollbar-track, #ping-rules-list::-webkit-scrollbar-track { background: transparent; }
+        .ping-mob-list-wrap::-webkit-scrollbar-thumb, #ping-rules-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        #ping-rules-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 6px;
+            border-radius: 4px;
+        }
         .ping-mob-label {
             display: flex;
             align-items: center;
@@ -2399,10 +2405,9 @@
             const moreBtn = document.getElementById('ping-mob-more');
             if (!el) return;
             const hasAnyRule = pingRules.rules.some(r => !r.slug);
-            const hasCommittedAnyRule = pingRules.rules.some(r => !r.slug && r.roleId);
             const allSlugs = getFilteredMobSlugs();
             const show = pingExpanded ? allSlugs : allSlugs.slice(0, 20);
-            const anyDisabled = hasCommittedAnyRule ? ' disabled' : '';
+            const anyDisabled = '';
             countEl && (countEl.textContent = `${show.length} / ${allSlugs.length} mobs`);
             if (moreBtn) {
                 if (allSlugs.length <= 20) { moreBtn.style.display = 'none'; }
