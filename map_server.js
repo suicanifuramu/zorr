@@ -79,7 +79,7 @@ function _sendToBots(eventType, data, accountId) {
     }
 }
 
-// Broadcast "I'm here" over UDP so bot_client_2 can detect map_server startup
+// Broadcast "I'm here" over UDP so bot clients can detect map_server startup
 // without having to poll. Bot listens on CONTROL_DISCOVERY_PORT and opens the
 // SSE connection when it receives a hello.
 function startControlDiscovery() {
@@ -429,7 +429,7 @@ const server = http.createServer((req, res) => {
                 for (const client of cSnapshot) {
                     try { client.write(`data: ${JSON.stringify(switchEvt)}\n\n`); } catch (e) { /* ignore */ }
                 }
-                // Append to commandQueue; bot_client_2 polls it (or we can
+                // Append to commandQueue; bot polls it (or we can
                 // push via SSE, but the bot doesn't subscribe to anything
                 // other than UDP discovery). Use commandQueue + bot poll.
                 commandQueue.push({ type: 'switch', region, biome });

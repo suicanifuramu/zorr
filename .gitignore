@@ -1,3 +1,4 @@
 .env
 accounts.txt
 zorr-deobfuscated.js
+.extraction_cache.json

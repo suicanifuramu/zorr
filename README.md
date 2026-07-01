@@ -9,8 +9,7 @@
 ```
 websocket/
 ├── README.md               — [本書] 環境概要と使い方
-├── bot_client.js           — メインボットクライアント (LCG暗号化, パース, 移動制御)
-├── bot_client_2.js         — 最適化版ボットクライアント (A*にMinHeapを採用しパフォーマンスを改善)
+├── bot_session.js          — メインボットクライアント (LCG暗号化, パース, A*ナビゲーション, 自動巡回)
 ├── protocol_extractor.js   — [重要] Node VM上でゲームJSを実行し最新のプロトコルバージョンを自動抽出
 ├── game_data_loader.js     — ゲームデータ (ペタル/モブ/レアリティなど) の抽出とキャッシュ管理
 ├── game_data.json          — 抽出されたゲームデータのキャッシュファイル
@@ -26,7 +25,7 @@ websocket/
 
 ## システム構成とデータフロー
 
-ボットシステムは、**ボット本体 (`bot_client.js`/`bot_client_2.js`)**、**マップ中継サーバー (`map_server.js`)**、**WebUI (`map.html`)** の3つが連携して動作します。
+ボットシステムは、**ボット本体 (`bot_session.js`)**、**マップ中継サーバー (`map_server.js`)**、**WebUI (`map.html`)** の3つが連携して動作します。
 
 ```
                     ┌───────────────────────────┐
@@ -38,11 +37,11 @@ websocket/
                                   │
                                   ▼
                    ┌─────────────────────────────┐
-                   │  bot_client_2.js            │
-                   │                             │
-                   │  1. VMプロトコル抽出        │
-                   │  2. パケット解析            │
-                   │  3. A* ナビゲーション       │
+                    │  bot_session.js             │
+                    │                             │
+                    │  1. VMプロトコル抽出        │
+                    │  2. パケット解析            │
+                    │  3. A* ナビゲーション       │
                    └────────┬──────────────▲─────┘
                             │              │
                    POST /mapdata        GET /command (2秒ポーリング)
@@ -65,7 +64,7 @@ websocket/
 ```
 
 1. **起動フェーズ**:
-   - `bot_client_2.js` 起動時に `protocol_extractor.js` を実行。最新のゲームJSを Node.js の VM (仮想マシン) サンドボックス内で実行させ、ゲームがWebSocket接続する際のハンドシェイクから**最新のプロトコルバージョン** (例: `444`) を動的に取得します。これにより、ゲームのアップデートによる `outdatedVersion` によるキックを自動的に回避します。
+   - `bot_session.js` 起動時に `protocol_extractor.js` を実行。最新のゲームJSを Node.js の VM (仮想マシン) サンドボックス内で実行させ、ゲームがWebSocket接続する際のハンドシェイクから**最新のプロトコルバージョン** (例: `444`) を動的に取得します。これにより、ゲームのアップデートによる `outdatedVersion` によるキックを自動的に回避します。
    - `game_data_loader.js` がゲーム内のペタル名・モブ名などを取得し `game_data.json` にキャッシュします。
 2. **接続フェーズ**:
    - ボットがゲームサーバーに WebSocket 接続。LCG (線形合同法) ストリーム暗号を用いて初期ハンドシェイク (Opcode 0) を送信し、以降のパケット送信時に XOR 暗号を適用します。
@@ -100,12 +99,11 @@ node map_server.js
 
 **ターミナル 2 (ボットクライアント起動)**:
 ```bash
-# 基本起動 (Plains サーバーにランダム名ボットを接続)
-node bot_client_2.js
+# 単一アカウント起動 (bot_client.js 互換)
+node bot_session.js
 
-# 引数を指定した起動
-# 引数: [サーバーURL] [PlayerID (UUID)] [ボット表示名] [AuthToken (オプション)]
-node bot_client_2.js wss://s-us-plains.zorr.pro/ cecb2644-547b-42fa-a4b4-b32ce1484cec "my_bot"
+# 複数アカウント起動 (accounts.txt から読み込み)
+node account_manager.js
 ```
 
 ### 3. ブラウザで監視と操作
@@ -124,9 +122,10 @@ node bot_client_2.js wss://s-us-plains.zorr.pro/ cecb2644-547b-42fa-a4b4-b32ce14
 - その VM 内でゲームのJSを安全に部分実行させ、ゲームが WebSocket 接続を試行した際に送信される `Opcode 0` パケットをモックの WebSocket でインターセプト。
 - パケットの `[1..4]` バイト目から Uint32 (リトルエンディアン) の**最新プロトコルバージョン**を自動抽出し、起動プロセスへ渡します。
 
-### 2. `bot_client_2.js` (A* パフォーマンス改善版)
-オリジナルの `bot_client.js` と基本構造は同じですが、経路探索処理を大幅に高速化しています。
-- A* アルゴリズムの `open list` の管理を、従来の配列の都度ソート (`open.sort()`, $O(N \log N)$) から、二分ヒープによる優先度付きキュー (`MinHeap`, 挿入・取り出しともに $O(\log N)$) に変更。これにより、広いマップで長い経路を計算する際のフレームレート低下や動作の「もっさり感」を完全に解消しました。
+### 2. `bot_session.js` (クラスベース版)
+`bot_client.js` をクラスベースにリファクタリングし、`account_manager.js` から複数アカウントを管理できるようにしたメインボットクライアントです。
+- A* アルゴリズムの `open list` の管理に二分ヒープによる優先度付きキュー (`MinHeap`, 挿入・取り出しともに $O(\log N)$) を採用。
+- 全 Opcode 処理、LCG 暗号化、自動巡回 (Auto Patrol)、Pinky 検出、Discord 通知を統合。
 
 ---
 

@@ -545,7 +545,7 @@ class BotSession {
             }
         } else if (eventName === 'auto-patrol') {
             console.log(`[${this.accountId.slice(0,8)}] [AP] SSE received: action=${data.action} servers=${data.servers?.length} switching=${this._switching} active=${this._AP.active} state=${this._AP.state}`);
-            if (data.action === 'start' && data.servers) this.apStart(data.servers);
+            if (data.action === 'start') this.apStart(data.servers);
             else if (data.action === 'stop') this.apStop();
         } else if (eventName === 'daily-claim') {
             this._sendClaimStreak();
@@ -1217,7 +1217,7 @@ class BotSession {
         const tag = `[${this.accountId.slice(0,8)}]`;
         console.log(`${tag} [AP] apStart called: active=${this._AP.active} state=${this._AP.state} servers=${servers?.length}`);
         if(this._AP.active) this.apStop();
-        this._AP.active=true; this._AP.servers=servers||[];
+        this._AP.active=true; this._AP.servers=(this._assignedServers&&this._assignedServers.length>0)?this._assignedServers:(servers||[]);
         this._AP.pinkyFailCount=0;
         this._AP.state='next_server';
         const um=this.serverUrl.match(/s-([a-z]+)-([a-z]+)\./);

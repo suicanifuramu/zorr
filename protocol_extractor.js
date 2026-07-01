@@ -6,7 +6,7 @@
  *
  * @deprecated Prefer `getOrComputeExtraction({ includeProtocol: true })` from
  *             extraction_pipeline.js. This wrapper remains for backward
- *             compatibility with bot_client*.js callers.
+ *             compatibility with bot_session.js callers.
  */
 const { getOrComputeExtraction } = require('./extraction_pipeline');
 
