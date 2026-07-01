@@ -58,10 +58,60 @@ function saveTrackingConfig() {
 }
 
 function pushTrackingConfigToBot() {
-    const payload = { ...trackingConfig, webhookUrl: process.env.DISCORD_WEBHOOK_URL || '' };
+    const payload = { ...trackingConfig };
     for (const [id, session] of botSessions) {
         if (session?.client) {
             try { session.client.write(`event: tracking\ndata: ${JSON.stringify(payload)}\n\n`); } catch(e) {}
+        }
+    }
+}
+
+// Ping rules (role pings per mob condition)
+const PING_RULES_PATH = path.join(__dirname, 'ping_rules.json');
+let pingRules = { rules: [] };
+try {
+    if (fs.existsSync(PING_RULES_PATH)) {
+        const rawPr = fs.readFileSync(PING_RULES_PATH, 'utf8').replace(/^\uFEFF/, '');
+        pingRules = JSON.parse(rawPr);
+        console.log(`[MapServer] Loaded ping rules: ${pingRules.rules.length} rules`);
+    }
+} catch (e) { /* ignore parse errors */ }
+
+function savePingRules() {
+    try {
+        fs.writeFileSync(PING_RULES_PATH, JSON.stringify(pingRules, null, 2));
+    } catch (e) { /* ignore write errors */ }
+}
+
+function pushPingRulesToBot() {
+    for (const [id, session] of botSessions) {
+        if (session?.client) {
+            try { session.client.write(`event: ping-rules\ndata: ${JSON.stringify(pingRules)}\n\n`); } catch(e) {}
+        }
+    }
+}
+
+// Biome channel config (channel ID per biome for Discord Bot API)
+const BIOME_CHANNELS_PATH = path.join(__dirname, 'biome_channels.json');
+let biomeChannels = { defaultChannelId: '', biomes: {} };
+try {
+    if (fs.existsSync(BIOME_CHANNELS_PATH)) {
+        const rawBc = fs.readFileSync(BIOME_CHANNELS_PATH, 'utf8').replace(/^\uFEFF/, '');
+        biomeChannels = JSON.parse(rawBc);
+        console.log(`[MapServer] Loaded biome channels: ${Object.keys(biomeChannels.biomes).length} biomes`);
+    }
+} catch (e) { /* ignore parse errors */ }
+
+function saveBiomeChannels() {
+    try {
+        fs.writeFileSync(BIOME_CHANNELS_PATH, JSON.stringify(biomeChannels, null, 2));
+    } catch (e) { /* ignore write errors */ }
+}
+
+function pushBiomeChannelsToBot() {
+    for (const [id, session] of botSessions) {
+        if (session?.client) {
+            try { session.client.write(`event: biome-channels\ndata: ${JSON.stringify(biomeChannels)}\n\n`); } catch(e) {}
         }
     }
 }
@@ -238,8 +288,10 @@ const server = http.createServer((req, res) => {
         // Initial state push
         res.write(`event: state\ndata: ${JSON.stringify({ attack: attackToggled, defend: defendToggled })}\n\n`);
         if (trackingConfig.targets.length > 0) {
-            res.write(`event: tracking\ndata: ${JSON.stringify({ ...trackingConfig, webhookUrl: process.env.DISCORD_WEBHOOK_URL || '' })}\n\n`);
+            res.write(`event: tracking\ndata: ${JSON.stringify({ ...trackingConfig })}\n\n`);
         }
+        res.write(`event: ping-rules\ndata: ${JSON.stringify(pingRules)}\n\n`);
+        res.write(`event: biome-channels\ndata: ${JSON.stringify(biomeChannels)}\n\n`);
         console.log(`[MapServer] Bot connected: ${accountId.slice(0,8)}`);
 
         req.on('close', () => {
@@ -682,6 +734,63 @@ const server = http.createServer((req, res) => {
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ accounts }));
+        return;
+    }
+
+    // ━━━━━━ Biome Channels Endpoints ━━━━━━
+    if (req.url === '/biome-channels' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(biomeChannels));
+        return;
+    }
+
+    if (req.url === '/biome-channels' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                if (data.defaultChannelId !== undefined) biomeChannels.defaultChannelId = data.defaultChannelId;
+                if (data.biomes && typeof data.biomes === 'object') biomeChannels.biomes = data.biomes;
+                saveBiomeChannels();
+                pushBiomeChannelsToBot();
+                console.log(`[MapServer] Biome channels updated: ${Object.keys(biomeChannels.biomes).length} biomes`);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true }));
+            } catch (e) {
+                res.writeHead(400);
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
+    // ━━━━━━ Ping Rules Endpoints ━━━━━━
+    if (req.url === '/ping-rules' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(pingRules));
+        return;
+    }
+
+    if (req.url === '/ping-rules' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                if (data.rules && Array.isArray(data.rules)) {
+                    pingRules.rules = data.rules;
+                }
+                savePingRules();
+                pushPingRulesToBot();
+                console.log(`[MapServer] Ping rules updated: ${pingRules.rules.length} rules`);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true }));
+            } catch (e) {
+                res.writeHead(400);
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
         return;
     }
 

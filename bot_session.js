@@ -237,8 +237,10 @@ class BotSession {
 
         // Tracking
         this.trackingTargets = [];
-        this.trackingWebhookUrl = process.env.DISCORD_WEBHOOK_URL || '';
+        this.botToken = process.env.DISCORD_BOT_TOKEN || '';
+        this.biomeChannels = { defaultChannelId: '', biomes: {} };
         this.notifiedMobs = [];
+        this.pingRules = [];
 
         // Broadcast
         this._broadcastBuffer = {};
@@ -530,7 +532,11 @@ class BotSession {
             this._computePath();
         } else if (eventName === 'tracking') {
             this.trackingTargets = data.targets || [];
-            if (data.webhookUrl) this.trackingWebhookUrl = data.webhookUrl;
+        } else if (eventName === 'ping-rules') {
+            this.pingRules = data.rules || [];
+        } else if (eventName === 'biome-channels') {
+            if (data.defaultChannelId !== undefined) this.biomeChannels.defaultChannelId = data.defaultChannelId;
+            if (data.biomes) this.biomeChannels.biomes = data.biomes;
         } else if (eventName === 'patrol') {
             const route = data.route || [];
             if (route.length > 0) { this.navRoute = route; this.navRouteIndex = 0; this.navigateTarget = { x: route[0].x, y: route[0].y }; this._computePath(); }
@@ -806,7 +812,7 @@ class BotSession {
             mobList.sort((a,b) => a.dist - b.dist);
 
             // Tracking
-            if (this.trackingTargets.length > 0 && this.trackingWebhookUrl && this._AP.active && !this._switching) {
+            if (this.trackingTargets.length > 0 && this.botToken && this._AP.active && !this._switching) {
                 for (const mob of mobList) {
                     for (const target of this.trackingTargets) {
                         if (mob.slug !== target.slug || target.enabled === false) continue;
@@ -1342,28 +1348,45 @@ class BotSession {
         return canvas.toBuffer('image/png');
     }
     _sendDiscordAlert(mob) {
-        if(!this.trackingWebhookUrl)return;
+        if(!this.botToken)return;
         const cellSz=this.serverMapSize/this.gridWidth;
         const gridX=Math.floor(mob.x/cellSz), gridY=Math.floor(mob.y/cellSz);
         const um=this.serverUrl.match(/s-([a-z]+)-([a-z]+)\./);
         const region=um?um[1]:'', sbiome=um?um[2]:'';
+        // Resolve channel ID: specific biome → default → skip
+        const channelId = (this.biomeChannels.biomes && this.biomeChannels.biomes[sbiome]) || this.biomeChannels.defaultChannelId;
+        if (!channelId) return;
         const vName=this._variantNames[mob.variant]||`V${mob.variant}`;
         const rObj=this._rarities[mob.rarity];
         const rName=rObj?rObj.name:`R${mob.rarity}`;
-        const content=`<@&1473497061981683876> ${rName.toLowerCase()} ${mob.variant===0?'':vName.toLowerCase()+' '}${mob.name.toLowerCase()} ${region}-${sbiome} ${gridX} ${gridY}`;
+        // Build role mention prefix from matching ping rules
+        let roleMentions = '';
+        if (this.pingRules && this.pingRules.length > 0) {
+            const matchedRoles = [];
+            for (const rule of this.pingRules) {
+                if (rule.slug && mob.slug !== rule.slug) continue;
+                if (rule.variants?.length > 0 && !rule.variants.includes(mob.variant)) continue;
+                if (rule.rarities?.length > 0 && !rule.rarities.includes(mob.rarity)) continue;
+                if (rule.roleId) matchedRoles.push(`<@&${rule.roleId}>`);
+            }
+            if (matchedRoles.length > 0) roleMentions = matchedRoles.join(' ') + ' ';
+        }
+        const content=`${roleMentions}${rName.toLowerCase()} ${mob.variant===0?'':vName.toLowerCase()+' '}${mob.name.toLowerCase()} ${region}-${sbiome} ${gridX} ${gridY}`;
         const imgBuf=this._generateMobMapImage(mob,gridX,gridY);
-        const webhookUrl=new URL(this.trackingWebhookUrl);
+        const apiHost='discord.com';
+        const apiPath=`/api/v10/channels/${channelId}/messages`;
+        const auth=`Bot ${this.botToken}`;
         if(imgBuf){
             const boundary='----ZorrBot'+Date.now();
             const pre=Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="payload_json"\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({content})}\r\n`);
             const filePart=Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="map.png"\r\nContent-Type: image/png\r\n\r\n`);
             const post=Buffer.from(`\r\n--${boundary}--\r\n`);
             const body=Buffer.concat([pre,filePart,imgBuf,post]);
-            const req=https.request({hostname:webhookUrl.hostname,port:443,path:webhookUrl.pathname+webhookUrl.search,method:'POST',headers:{'Content-Type':`multipart/form-data; boundary=${boundary}`,'Content-Length':body.length}},(res)=>{res.resume();});
+            const req=https.request({hostname:apiHost,port:443,path:apiPath,method:'POST',headers:{'Authorization':auth,'Content-Type':`multipart/form-data; boundary=${boundary}`,'Content-Length':body.length}},(res)=>{res.resume();});
             req.on('error',()=>{}); req.end(body);
         } else {
             const body=JSON.stringify({content});
-            const req=https.request({hostname:webhookUrl.hostname,port:443,path:webhookUrl.pathname+webhookUrl.search,method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},(res)=>{res.resume();});
+            const req=https.request({hostname:apiHost,port:443,path:apiPath,method:'POST',headers:{'Authorization':auth,'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}},(res)=>{res.resume();});
             req.on('error',()=>{}); req.end(body);
         }
     }

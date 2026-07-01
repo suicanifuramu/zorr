@@ -659,6 +659,176 @@
             transition: all 0.2s;
         }
         .routes-btn:hover { background: rgba(0,255,204,0.15); box-shadow: 0 0 8px rgba(0,255,204,0.3); }
+        /* Ping Roles tabs & view */
+        .tracking-tabs {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 8px;
+        }
+        .tracking-tab {
+            flex: 1;
+            padding: 5px 0;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #1a1f2e;
+            color: #888;
+            font-size: 11px;
+            font-weight: bold;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+        .tracking-tab:hover { border-color: #00ffcc; color: #ccc; }
+        .tracking-tab.active {
+            background: rgba(0,255,204,0.15);
+            color: #00ffcc;
+            border-color: #00ffcc;
+        }
+        .tracking-view { display: none; }
+        .tracking-view.active { display: block; }
+        .ping-rule-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            margin-bottom: 4px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.06);
+            font-size: 11px;
+        }
+        .ping-rule-info { flex: 1; min-width: 0; }
+        .ping-rule-slug { color: #00ffcc; font-weight: bold; }
+        .ping-role-id { color: #fbbf24; font-family: monospace; }
+        .ping-rule-filters { color: #888; font-size: 10px; }
+        .ping-del-btn {
+            background: none;
+            border: 1px solid #7f1d1d;
+            color: #ef4444;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-left: 6px;
+        }
+        .ping-del-btn:hover { background: rgba(239,68,68,0.15); }
+        .ping-add-row {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .ping-add-row select, .ping-add-row input {
+            background: #1a1f2e;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 11px;
+            font-family: monospace;
+            padding: 4px 6px;
+            outline: none;
+        }
+        .ping-add-row select:focus, .ping-add-row input:focus { border-color: #00ffcc; }
+        .ping-add-row select { flex: 2; min-width: 120px; }
+        .ping-add-row input { flex: 1; min-width: 80px; }
+        .ping-add-btn {
+            padding: 4px 12px;
+            background: #00ffcc;
+            border: none;
+            border-radius: 4px;
+            color: #0c111e;
+            font-size: 11px;
+            font-weight: bold;
+            font-family: monospace;
+            cursor: pointer;
+        }
+        .ping-add-btn:hover { background: #00cca3; }
+        .ping-filter-section {
+            margin-bottom: 8px;
+            padding: 6px 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        .ping-filter-section .mob-section-title { color: #888; font-size: 10px; }
+        .ping-search-input {
+            width: 100%;
+            padding: 5px 8px;
+            margin-bottom: 6px;
+            background: #1a1f2e;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+            font-family: monospace;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .ping-search-input:focus { border-color: #00ffcc; }
+        .ping-search-input::placeholder { color: #555; }
+        .ping-mob-list-wrap {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 6px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 4px;
+            padding: 2px 0;
+        }
+        .ping-mob-list-wrap::-webkit-scrollbar { width: 4px; }
+        .ping-mob-list-wrap::-webkit-scrollbar-track { background: transparent; }
+        .ping-mob-list-wrap::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        .ping-mob-label {
+            display: flex;
+            align-items: center;
+            padding: 3px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.1s;
+            color: #ccc;
+        }
+        .ping-mob-any {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 4px;
+            padding-bottom: 4px;
+            color: #fbbf24;
+            font-weight: 600;
+        }
+        .ping-mob-any input { accent-color: #fbbf24; }
+        .ping-mob-checkbox:disabled { cursor: not-allowed; }
+        .ping-mob-label.ping-mob-disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+        .ping-mob-label.ping-mob-disabled:hover { background: transparent; }
+        .ping-mob-label:hover { background: rgba(0,255,204,0.06); }
+        .ping-mob-label .ping-mob-checkbox {
+            accent-color: #00ffcc;
+            margin-right: 6px;
+            cursor: pointer;
+        }
+        .ping-mob-more-btn {
+            display: block;
+            width: 100%;
+            padding: 4px;
+            background: none;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #888;
+            font-size: 10px;
+            font-family: monospace;
+            cursor: pointer;
+            text-align: center;
+            margin-bottom: 6px;
+            transition: all 0.15s;
+        }
+        .ping-mob-more-btn:hover { border-color: #00ffcc; color: #00ffcc; }
+        .ping-mob-count {
+            font-size: 10px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        .bio-channel-input:focus { border-color: #00ffcc !important; }
     </style>
 </head>
 <body>
@@ -2158,8 +2328,232 @@
             }
         }
 
+        // ━━━━━━ Ping Roles ━━━━━━
+        let pingRules = { rules: [] };
+        let pingSearchQuery = '';
+        let pingExpanded = false;
+
+        function switchTrackingView(view) {
+            document.querySelectorAll('.tracking-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+            document.querySelectorAll('.tracking-view').forEach(v => v.classList.toggle('active', v.id === view + '-view'));
+            if (view === 'ping') {
+                initPingFilters();
+                renderPingMobList();
+                renderPingRules();
+            } else if (view === 'biomes') {
+                renderBiomeChannels();
+            }
+        }
+
+        function loadPingRules() {
+            fetch('/ping-rules').then(r => r.ok ? r.json() : null).then(data => {
+                if (data) { pingRules = data; renderPingRules(); renderPingMobList(); }
+            }).catch(() => {});
+        }
+
+        function saveAllConfig() {
+            saveTrackingConfig();
+            savePingRules();
+            saveBiomeChannels();
+        }
+
+        function savePingRules() {
+            fetch('/ping-rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(pingRules)
+            }).catch(() => {});
+        }
+
+        function initPingFilters() {
+            const varWrap = document.getElementById('ping-vars');
+            const rarWrap = document.getElementById('ping-rars');
+            if (!varWrap || !rarWrap) return;
+            if (Object.keys(VARIANT_NAMES).length === 0) return;
+            varWrap.innerHTML = Object.entries(VARIANT_NAMES).map(([id, name]) =>
+                `<label class="mob-checkbox-label"><input type="checkbox" class="ping-checkbox" data-type="var" data-id="${id}">${name}</label>`
+            ).join('');
+            rarWrap.innerHTML = RARITIES.map((r, i) =>
+                `<label class="mob-checkbox-label" style="color:${r.color}"><input type="checkbox" class="ping-checkbox" data-type="rar" data-id="${i}">${r.name}</label>`
+            ).join('');
+        }
+
+        function getFilteredMobSlugs() {
+            const q = pingSearchQuery.toLowerCase();
+            return Object.keys(MOB_BY_SLUG).filter(s => {
+                const mob = MOB_BY_SLUG[s];
+                const name = (mob?.name || s).toLowerCase();
+                return name.includes(q) || s.includes(q);
+            }).sort((a, b) => {
+                const na = (MOB_BY_SLUG[a]?.name || a).toLowerCase();
+                const nb = (MOB_BY_SLUG[b]?.name || b).toLowerCase();
+                return na.localeCompare(nb);
+            });
+        }
+
+        function renderPingMobList() {
+            const el = document.getElementById('ping-mob-list');
+            const countEl = document.getElementById('ping-mob-count');
+            const moreBtn = document.getElementById('ping-mob-more');
+            if (!el) return;
+            const hasAnyRule = pingRules.rules.some(r => !r.slug);
+            const hasCommittedAnyRule = pingRules.rules.some(r => !r.slug && r.roleId);
+            const allSlugs = getFilteredMobSlugs();
+            const show = pingExpanded ? allSlugs : allSlugs.slice(0, 20);
+            const anyDisabled = hasCommittedAnyRule ? ' disabled' : '';
+            countEl && (countEl.textContent = `${show.length} / ${allSlugs.length} mobs`);
+            if (moreBtn) {
+                if (allSlugs.length <= 20) { moreBtn.style.display = 'none'; }
+                else { moreBtn.style.display = 'block'; moreBtn.textContent = pingExpanded ? 'Show Less' : `Show All (${allSlugs.length} mobs)`; }
+            }
+            const anyChecked = hasAnyRule ? ' checked' : '';
+            let html = `<label class="ping-mob-label ping-mob-any"><input type="checkbox" class="ping-mob-checkbox" data-slug=""${anyChecked}${anyDisabled}> (Any Mob - variant/rarity only)</label>`;
+
+            html += show.map(slug => {
+                const mob = MOB_BY_SLUG[slug];
+                const name = (mob?.name || slug).replace(/_/g, ' ');
+                const checked = pingRules.rules.some(r => r.slug === slug) ? ' checked' : '';
+                const disabled = hasAnyRule ? ' disabled' : '';
+                const labelCls = disabled ? 'ping-mob-label ping-mob-disabled' : 'ping-mob-label';
+                return `<label class="${labelCls}"><input type="checkbox" class="ping-mob-checkbox" data-slug="${slug}"${checked}${disabled}> ${name}</label>`;
+            }).join('');
+            el.innerHTML = html;
+        }
+
+        function onPingMobSearch() {
+            pingSearchQuery = document.getElementById('ping-mob-search').value;
+            pingExpanded = false;
+            renderPingMobList();
+        }
+
+        function loadMoreMobs() {
+            pingExpanded = !pingExpanded;
+            renderPingMobList();
+        }
+
+        function togglePingAll(type, checked) {
+            const wrap = document.getElementById(type === 'var' ? 'ping-vars' : 'ping-rars');
+            if (wrap) wrap.querySelectorAll('input').forEach(cb => cb.checked = checked);
+        }
+
+        function addPingRule() {
+            const anyCheckbox = document.querySelector('#ping-mob-list .ping-mob-checkbox[data-slug=""]');
+            const anyChecked = anyCheckbox && anyCheckbox.checked;
+            const checkedSlugs = [];
+            if (anyChecked) {
+                checkedSlugs.push('');
+            } else {
+                document.querySelectorAll('#ping-mob-list .ping-mob-checkbox:checked').forEach(cb => checkedSlugs.push(cb.dataset.slug));
+            }
+            const roleId = document.getElementById('ping-role-id-input').value.trim();
+            if (checkedSlugs.length === 0 || !roleId) return;
+            const variants = [];
+            const rarities = [];
+            document.querySelectorAll('#ping-vars .ping-checkbox:checked').forEach(cb => variants.push(Number(cb.dataset.id)));
+            document.querySelectorAll('#ping-rars .ping-checkbox:checked').forEach(cb => rarities.push(Number(cb.dataset.id)));
+            // Remove existing rules for same slugs, then add new ones
+            for (const slug of checkedSlugs) {
+                pingRules.rules = pingRules.rules.filter(r => r.slug !== slug);
+                pingRules.rules.push({ slug, variants, rarities, roleId });
+            }
+            renderPingRules();
+            renderPingMobList();
+            document.getElementById('ping-role-id-input').value = '';
+            document.querySelectorAll('.ping-checkbox').forEach(cb => cb.checked = false);
+        }
+
+        function deletePingRule(index) {
+            pingRules.rules.splice(index, 1);
+            renderPingRules();
+            renderPingMobList();
+        }
+
+        function renderPingRules() {
+            const el = document.getElementById('ping-rules-list');
+            if (!el) return;
+            if (!pingRules.rules || pingRules.rules.length === 0) {
+                el.innerHTML = '<div style="color:#6b7280;font-size:11px;text-align:center;padding:8px;">No ping rules configured</div>';
+                return;
+            }
+            el.innerHTML = pingRules.rules.map((rule, i) => {
+                const mobName = rule.slug ? (MOB_BY_SLUG[rule.slug]?.name || rule.slug).replace(/_/g, ' ') : '(Any Mob)';
+                const varText = rule.variants && rule.variants.length > 0
+                    ? 'v:' + rule.variants.map(v => VARIANT_NAMES[v] || `V${v}`).join(',')
+                    : 'all variants';
+                const rarText = rule.rarities && rule.rarities.length > 0
+                    ? 'r:' + rule.rarities.map(r => (RARITIES[r]?.name || `R${r}`)).join(',')
+                    : 'all rarities';
+                return `<div class="ping-rule-item">
+                    <div class="ping-rule-info">
+                        <div><span class="ping-rule-slug">${mobName}</span> → <span class="ping-role-id">@&amp;${rule.roleId}</span></div>
+                        <div class="ping-rule-filters">${varText} · ${rarText}</div>
+                    </div>
+                    <button class="ping-del-btn" onclick="deletePingRule(${i})">Del</button>
+                </div>`;
+            }).join('');
+        }
+
+        // ━━━━━━ Biome Channels ━━━━━━
+        let biomeChannels = { defaultChannelId: '', biomes: {} };
+
+        function loadBiomeChannels() {
+            fetch('/biome-channels').then(r => r.ok ? r.json() : null).then(data => {
+                if (data) { biomeChannels = data; renderBiomeChannels(); }
+            }).catch(() => {});
+        }
+
+        function saveBiomeChannels() {
+            // Collect from DOM
+            biomeChannels.defaultChannelId = document.getElementById('biome-default-channel').value.trim();
+            const entries = {};
+            document.querySelectorAll('#biome-channel-list .bio-channel-input').forEach(inp => {
+                const slug = inp.dataset.slug;
+                const val = inp.value.trim();
+                if (val) entries[slug] = val;
+            });
+            biomeChannels.biomes = entries;
+            fetch('/biome-channels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(biomeChannels)
+            }).catch(() => {});
+        }
+
+        function renderBiomeChannels() {
+            const el = document.getElementById('biome-channel-list');
+            const defInput = document.getElementById('biome-default-channel');
+            if (!el || !defInput) return;
+            defInput.value = biomeChannels.defaultChannelId || '';
+            const biomes = Array.isArray(gameConfig && gameConfig.biomes) ? gameConfig.biomes : [];
+            if (biomes.length === 0) {
+                el.innerHTML = '<div style="color:#6b7280;font-size:11px;text-align:center;padding:12px;">Load game config first</div>';
+                return;
+            }
+            el.innerHTML = biomes.map(b => {
+                const val = (biomeChannels.biomes && biomeChannels.biomes[b.slug]) || '';
+                return `<div class="ping-rule-item">
+                    <span style="color:#00ffcc;font-weight:bold;font-size:11px;min-width:80px;">${b.name}</span>
+                    <input type="text" class="bio-channel-input" data-slug="${b.slug}" value="${val}" placeholder="Channel ID" style="flex:1;background:#1a1f2e;border:1px solid #333;border-radius:4px;color:#fff;font-size:11px;font-family:monospace;padding:4px 6px;outline:none;" />
+                </div>`;
+            }).join('');
+        }
+
         // Delegate checkbox change events
         document.addEventListener('change', (e) => {
+            // Any Mob toggle → instant enable/disable all individual mob checkboxes
+            if (e.target.classList.contains('ping-mob-checkbox') && e.target.dataset.slug === '') {
+                const checked = e.target.checked;
+                if (checked) {
+                    if (!pingRules.rules.some(r => !r.slug)) {
+                        pingRules.rules.push({ slug: '', variants: [], rarities: [] });
+                    }
+                } else {
+                    pingRules.rules = pingRules.rules.filter(r => r.slug !== '');
+                }
+                renderPingMobList();
+                return;
+            }
+            // Tracking config checkbox change
             if (e.target.classList.contains('mob-checkbox')) {
                 const item = e.target.closest('.biome-mob-item');
                 if (item) {
@@ -2169,8 +2563,19 @@
             }
         });
 
-        // Load tracking config on startup
+        // Load tracking config + ping rules + biome channels on startup
         loadTrackingConfig();
+        loadPingRules();
+        loadBiomeChannels();
+
+        // Re-render ping mob list + init filters + biome channels when config loads
+        const _origApplyConfig = applyConfig;
+        applyConfig = function(cfg) {
+            _origApplyConfig(cfg);
+            initPingFilters();
+            renderPingMobList();
+            renderBiomeChannels();
+        };
 
         // Restore auto-patrol state on page load
         fetch('/auto-patrol/status').then(r => r.json()).then(data => {
@@ -2547,13 +2952,53 @@
                 <button class="biome-modal-close" onclick="closeBiomeModal()">&times;</button>
             </div>
             <div class="tracking-section">
-                <div class="tracking-save-row">
-                    <button class="tracking-save-btn" onclick="saveTrackingConfig()">Save Tracking</button>
+                <div class="tracking-tabs">
+                    <button class="tracking-tab active" data-view="tracking" onclick="switchTrackingView('tracking')">Tracking Config</button>
+                    <button class="tracking-tab" data-view="ping" onclick="switchTrackingView('ping')">Ping Roles</button>
+                    <button class="tracking-tab" data-view="biomes" onclick="switchTrackingView('biomes')">Biomes</button>
                 </div>
-            </div>
-            <div class="biome-tabs" id="biome-tabs"></div>
-            <div class="biome-mob-list" id="biome-mob-list">
-                <div class="biome-mob-count">Select a biome to view mobs</div>
+                <div class="tracking-view active" id="tracking-view">
+                    <div class="biome-tabs" id="biome-tabs"></div>
+                    <div class="biome-mob-list" id="biome-mob-list">
+                        <div class="biome-mob-count">Select a biome to view mobs</div>
+                    </div>
+                </div>
+                <div class="tracking-view" id="ping-view">
+                    <!-- Mob search + checkboxes -->
+                    <input type="text" class="ping-search-input" id="ping-mob-search" placeholder="Search mobs..." oninput="onPingMobSearch()" />
+                    <div class="ping-mob-count" id="ping-mob-count"></div>
+                    <div class="ping-mob-list-wrap" id="ping-mob-list"></div>
+                    <button class="ping-mob-more-btn" id="ping-mob-more" onclick="loadMoreMobs()" style="display:none;">Show more...</button>
+                    <!-- Variant/rarity filter -->
+                    <div class="ping-filter-section">
+                        <div class="mob-section-title">Variants
+                            <button class="mob-all-btn" onclick="togglePingAll('var',true)">All</button>
+                            <button class="mob-all-btn" onclick="togglePingAll('var',false)">None</button>
+                        </div>
+                        <div class="mob-checkbox-wrap" id="ping-vars"></div>
+                        <div class="mob-section-title" style="margin-top:4px;">Rarities
+                            <button class="mob-all-btn" onclick="togglePingAll('rar',true)">All</button>
+                            <button class="mob-all-btn" onclick="togglePingAll('rar',false)">None</button>
+                        </div>
+                        <div class="mob-checkbox-wrap" id="ping-rars"></div>
+                    </div>
+                    <!-- Role ID + Add button -->
+                    <div class="ping-add-row" style="margin-bottom:6px;">
+                        <input type="text" id="ping-role-id-input" placeholder="Role ID" />
+                        <button class="ping-add-btn" onclick="addPingRule()">+ Add Rule</button>
+                    </div>
+                    <!-- Rules list -->
+                    <div id="ping-rules-list"></div>
+                </div>
+                <div class="tracking-view" id="biomes-view">
+                    <div style="padding:6px 0;font-size:11px;color:#9ca3af;">Default channel for biomes without specific assignment:</div>
+                    <input type="text" class="ping-search-input" id="biome-default-channel" placeholder="Default Channel ID" style="margin-bottom:8px;" />
+                    <div style="font-size:11px;color:#888;margin-bottom:4px;">Per-biome channel IDs (leave empty to use default):</div>
+                    <div class="ping-mob-list-wrap" id="biome-channel-list"></div>
+                </div>
+                <div class="tracking-save-row">
+                    <button class="tracking-save-btn" onclick="saveAllConfig()">Save Tracking</button>
+                </div>
             </div>
         </div>
     </div>
