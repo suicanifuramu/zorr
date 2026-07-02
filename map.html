@@ -2338,6 +2338,7 @@
         let pingRules = { rules: [] };
         let pingSearchQuery = '';
         let pingExpanded = false;
+        let roleCache = {};
 
         function switchTrackingView(view) {
             document.querySelectorAll('.tracking-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
@@ -2346,6 +2347,7 @@
                 initPingFilters();
                 renderPingMobList();
                 renderPingRules();
+                loadRoles();
             } else if (view === 'biomes') {
                 renderBiomeChannels();
             }
@@ -2471,6 +2473,19 @@
             renderPingMobList();
         }
 
+        function loadRoles() {
+            fetch('/api/roles')
+                .then(r => r.ok ? r.json() : null)
+                .then(roles => {
+                    if (roles && Array.isArray(roles)) {
+                        roleCache = {};
+                        roles.forEach(r => { roleCache[r.id] = r.name; });
+                        renderPingRules();
+                    }
+                })
+                .catch(() => {});
+        }
+
         function renderPingRules() {
             const el = document.getElementById('ping-rules-list');
             if (!el) return;
@@ -2486,9 +2501,11 @@
                 const rarText = rule.rarities && rule.rarities.length > 0
                     ? 'r:' + rule.rarities.map(r => (RARITIES[r]?.name || `R${r}`)).join(',')
                     : 'all rarities';
+                const roleName = roleCache[rule.roleId];
+                const roleDisplay = roleName ? `@${roleName} (${rule.roleId})` : `@&amp;${rule.roleId}`;
                 return `<div class="ping-rule-item">
                     <div class="ping-rule-info">
-                        <div><span class="ping-rule-slug">${mobName}</span> → <span class="ping-role-id">@&amp;${rule.roleId}</span></div>
+                        <div><span class="ping-rule-slug">${mobName}</span> → <span class="ping-role-id">${roleDisplay}</span></div>
                         <div class="ping-rule-filters">${varText} · ${rarText}</div>
                     </div>
                     <button class="ping-del-btn" onclick="deletePingRule(${i})">Del</button>

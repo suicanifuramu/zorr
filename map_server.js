@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const dgram = require('dgram');
@@ -790,6 +791,31 @@ const server = http.createServer((req, res) => {
                 res.writeHead(400);
                 res.end(JSON.stringify({ error: e.message }));
             }
+        });
+        return;
+    }
+
+    // ━━━━━━ Roles API Proxy ━━━━━━
+    if (req.url === '/api/roles' && req.method === 'GET') {
+        const guildId = process.env.DISCORD_GUILD_ID;
+        const token = process.env.DISCORD_BOT_TOKEN;
+        if (!guildId || !token) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'DISCORD_GUILD_ID or DISCORD_BOT_TOKEN not set' }));
+            return;
+        }
+        https.get(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
+            headers: { 'Authorization': `Bot ${token}` }
+        }, (dRes) => {
+            let body = '';
+            dRes.on('data', c => body += c);
+            dRes.on('end', () => {
+                res.writeHead(dRes.statusCode, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+                res.end(body);
+            });
+        }).on('error', (e) => {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
         });
         return;
     }
