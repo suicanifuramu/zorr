@@ -232,7 +232,7 @@ class BotSession {
         this._mobBlockWPKey = '';
 
         // Auto patrol
-        this._AP = { active: false, state: 'idle', pinkyFailCount: 0, pinkyTimeout: null, servers: [], serverIndex: 0, buildSwitchTimeout: null, cooldownTimer: null, log: [], routes: {} };
+        this._AP = { active: false, state: 'idle', pinkyFailCount: 0, pinkyTimeout: null, servers: [], serverIndex: 0, buildSwitchTimeout: null, cooldownTimer: null, patrolTimeout: null, log: [], routes: {} };
 
         // Server toggles
         this.serverAttackToggled = false;
@@ -1239,7 +1239,7 @@ class BotSession {
         if(this._AP.log.length>AP_LOG_MAX) this._AP.log.shift();
         this._broadcastMapData({type:'auto-patrol',session:this._currentSessionId,state:this._AP.state,pinkyFailCount:this._AP.pinkyFailCount,active:this._AP.active,currentServer:this._AP.servers[this._AP.serverIndex]||null,serverIndex:this._AP.serverIndex,serverCount:this._AP.servers.length,log:this._AP.log.slice(-10)});
     }
-    apClearTimers() { if(this._AP.pinkyTimeout){clearTimeout(this._AP.pinkyTimeout);this._AP.pinkyTimeout=null;} if(this._AP.buildSwitchTimeout){clearTimeout(this._AP.buildSwitchTimeout);this._AP.buildSwitchTimeout=null;} if(this._AP.cooldownTimer){clearTimeout(this._AP.cooldownTimer);this._AP.cooldownTimer=null;} }
+    apClearTimers() { if(this._AP.pinkyTimeout){clearTimeout(this._AP.pinkyTimeout);this._AP.pinkyTimeout=null;} if(this._AP.buildSwitchTimeout){clearTimeout(this._AP.buildSwitchTimeout);this._AP.buildSwitchTimeout=null;} if(this._AP.cooldownTimer){clearTimeout(this._AP.cooldownTimer);this._AP.cooldownTimer=null;} if(this._AP.patrolTimeout){clearTimeout(this._AP.patrolTimeout);this._AP.patrolTimeout=null;} }
     apStop() {
         this.apClearTimers(); this._AP.active=false; this._AP.state='idle';
         this._AP.pinkyFailCount=0; this._AP.servers=[]; this._AP.serverIndex=0; this._AP.log=[];
@@ -1333,6 +1333,12 @@ class BotSession {
         } else if(this._AP.state==='move_build'){
             this._AP.state='patrolling'; this._AP.pinkyFailCount=0;
             this.apLog(`Patrolling`);
+            this.apClearTimers();
+            this._AP.patrolTimeout=setTimeout(()=>{
+                if(!this._AP.active||this._AP.state!=='patrolling')return;
+                this.apLog('Patrol timeout (10min) → next server');
+                this.navRoute=[];this.navRouteIndex=0;this._AP.serverIndex++;this.apAdvance();
+            },600000);
             const srv=this._AP.servers[this._AP.serverIndex];
             if(srv?.waypoints?.length>0){this.navRoute=srv.waypoints;this.navRouteIndex=0;this.navigateTarget={x:srv.waypoints[0].x,y:srv.waypoints[0].y};this._computePath();}
             else{this._AP.serverIndex++;this.apAdvance();}
@@ -1346,6 +1352,11 @@ class BotSession {
             this._equipBuild('move');
             this._AP.state='patrolling'; this._AP.pinkyFailCount=0;
             this.apLog(`Patrolling`);
+            this._AP.patrolTimeout=setTimeout(()=>{
+                if(!this._AP.active||this._AP.state!=='patrolling')return;
+                this.apLog('Patrol timeout (10min) → next server');
+                this.navRoute=[];this.navRouteIndex=0;this._AP.serverIndex++;this.apAdvance();
+            },600000);
             const srv=this._AP.servers[this._AP.serverIndex];
             if(srv?.waypoints?.length>0){this.navRoute=srv.waypoints;this.navRouteIndex=0;this.navigateTarget={x:srv.waypoints[0].x,y:srv.waypoints[0].y};this._computePath();}
             else{this._AP.serverIndex++;this.apAdvance();}
@@ -1357,6 +1368,7 @@ class BotSession {
             this.apClearTimers(); this._AP.pinkyFailCount++;
             if(this._AP.pinkyFailCount>=3){this._AP.serverIndex++;this.apAdvance();}
         } else if(this._AP.state==='patrolling'){
+            this.apClearTimers();
             this.apLog('Death during patrol → next server');
             this.navRoute=[];this.navRouteIndex=0;this._AP.serverIndex++;this.apAdvance();
         }
