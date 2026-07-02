@@ -22,6 +22,7 @@ const ENTITY_TYPE = { ENTITY:0, PLAYER:1, PETAL:2, MOB:3, DROP:4, ZONE_O:5, ZONE
 const UPDATE_FLAGS = { POSITION:1, ANGLE:2, SIZE:4, DAMAGE:8, LAYER:16, STATUS:32, LEVEL:64, FACE:128, VG:256, GUILD:512, MANA:1024, GE:2048, HEALTH:4096, PE:8192 };
 const CENTER_COST = 25;
 const _FRANTIC_DIRS = [[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[-1,1],[0,1],[1,1]];
+const _FRANTIC_MAX_MS = 8000;
 const AP_LOG_MAX = 50;
 
 const _talentData = require('./talent_data');
@@ -163,6 +164,7 @@ class BotSession {
         this.ws = null;
         this._switching = false;
         this._switchingTimer = null;
+        this._lastWsMessageAt = 0;
         this._lastMapBroadcast = 0;
         this._connectEpoch = 0;
         this._connectCounter = 0;
@@ -221,6 +223,7 @@ class BotSession {
         this._stuckCellKey = null;
         this._stuckSince = 0;
         this._franticMode = false;
+        this._franticStartedAt = 0;
         this._franticOriginCX = 0;
         this._franticOriginCY = 0;
         this._franticDirIndex = 0;
@@ -318,12 +321,20 @@ class BotSession {
             if (this._AP.state === 'cooldown') return;
             const tag2 = `[${this.accountId.slice(0,8)}]`;
             console.log(`${tag2} [Bot] Connection closed (${code}). Reconnecting in 5s...`);
+            const wasAPActive = this._AP.active;
             if (this._AP.active && this._AP.state !== 'idle' && this._AP.state !== 'next_server') {
                 console.log(`${tag2} [Bot] AP state was '${this._AP.state}', resetting to 'next_server'`);
                 this._AP.state = 'next_server';
             }
             this._cleanup();
-            setTimeout(() => this.connect(), 5000);
+            setTimeout(() => {
+                this.connect();
+                if (wasAPActive && this._AP.active && this._AP.state === 'next_server') {
+                    const tag3 = `[${this.accountId.slice(0,8)}]`;
+                    console.log(`${tag3} [AP] Resuming after reconnect, advancing`);
+                    this.apAdvance();
+                }
+            }, 5000);
         });
         this.ws.on('error', (err) => {
             console.error(`[${this.accountId.slice(0,8)}] [Bot] WS Error: ${err.message}`);
@@ -342,18 +353,26 @@ class BotSession {
         this.activePetals.clear(); this.activeMobs.clear(); this.knownEntities.clear();
         this.botOutlierCount = 0; this.botEquippedPetals = []; this.botInventory = {};
         this.notifiedMobs.length = 0;
-        this.navRoute = []; this.navRouteIndex = 0;
-        this.navPath = []; this.navigateTarget = null;
+        this._clearNavigation('cleanup');
     }
 
     switchBotServer(region, biome) {
         if (this._switching) return;
         this.notifiedMobs.length = 0;
         this._switching = true;
+        this._clearNavigation('switch');
         const tag = `[${this.accountId.slice(0,8)}]`;
         if (this._switchingTimer) clearTimeout(this._switchingTimer);
         this._switchingTimer = setTimeout(() => {
-            if (this._switching) { this._switching = false; console.log(`${tag} [Switch] Force reset _switching after 15s timeout`); }
+            if (this._switching) {
+                this._switching = false;
+                console.log(`${tag} [Switch] Force reset _switching after 15s timeout`);
+                if (this._AP.active && this._AP.state !== 'idle' && this._AP.state !== 'cooldown') {
+                    console.log(`${tag} [AP] Recovering from stuck switch, advancing to next server`);
+                    this._AP.serverIndex++;
+                    this.apAdvance();
+                }
+            }
         }, 15000);
         try {
             const postData = JSON.stringify({ type: 'switch', accountId: this.accountId, region, biome });
@@ -476,13 +495,25 @@ class BotSession {
 
     // ── Broadcast ──
     _broadcastMapData(data) {
-        if (this._switching && data.type !== 'auto-patrol') return;
         data.accountId = this.accountId;
+        data.botTs = Date.now();
+        data.lastWsMessageAt = this._lastWsMessageAt;
+        data.serverUrl = this.serverUrl;
+        if (this._switching) data.switching = true;
+        if (data.type === 'position' || data.type === 'auto-patrol') {
+            data.navRouteIndex = this.navRouteIndex;
+            data.navRouteCount = this.navRoute.length;
+            data.navWaypointIndex = this.navWaypointIndex;
+            data.navigateTarget = this.navigateTarget ? { ...this.navigateTarget } : null;
+        }
         this._broadcastBuffer[data.type] = data;
         if (!this._broadcastTimer) this._broadcastTimer = setTimeout(() => this._flushBroadcast(), 100);
     }
     _sendDirectMapData(data) {
         data.accountId = this.accountId;
+        data.botTs = Date.now();
+        data.lastWsMessageAt = this._lastWsMessageAt;
+        data.serverUrl = this.serverUrl;
         const postData = JSON.stringify(data);
         try {
             const req = http.request({ hostname: 'localhost', port: 3000, path: '/mapdata', method: 'POST', agent: false,
@@ -548,9 +579,8 @@ class BotSession {
             this._pendingEquipCmd = data;
             this._processPendingEquip();
         } else if (eventName === 'navigate') {
-            if (data.action === 'stop') { this.navRoute = []; this.navRouteIndex = 0; this.navPath = []; this.navigateTarget = null; this._sendMovement(0, 0); return; }
-            this.navigateTarget = { x: data.x, y: data.y };
-            this._computePath();
+            if (data.action === 'stop') { this._clearNavigation('navigate-stop'); this._sendMovement(0, 0); return; }
+            this._setNavigateTarget({ x: data.x, y: data.y }, 'navigate');
         } else if (eventName === 'tracking') {
             this.trackingTargets = data.targets || [];
         } else if (eventName === 'ping-rules') {
@@ -560,15 +590,15 @@ class BotSession {
             if (data.biomes) this.biomeChannels.biomes = data.biomes;
         } else if (eventName === 'patrol') {
             const route = data.route || [];
-            if (route.length > 0) { this.navRoute = route; this.navRouteIndex = 0; this.navigateTarget = { x: route[0].x, y: route[0].y }; this._computePath(); }
+            if (route.length > 0) this._setRoute(route, 'patrol-event');
         } else if (eventName === 'command') {
             if (data.action === 'title') {
-                if (!this.isDead && !this.respawnState && !this.returnToTitle) { this.isDead = true; this.isSpawned = false; this.navPath = []; this.navigateTarget = null; this.returnToTitle = true; this.respawnState = 'die_sent'; this._sendDie(); }
+                if (!this.isDead && !this.respawnState && !this.returnToTitle) { this.isDead = true; this.isSpawned = false; this._clearNavigation('title'); this.returnToTitle = true; this.respawnState = 'die_sent'; this._sendDie(); }
             } else if (data.action === 'spawn') {
                 this.returnToTitle = false;
                 if (!this.isSpawned && this.respawnState !== 'spawn_sent') { this._sendSpawn(this.botName); this.respawnState = 'spawn_sent'; }
             } else if (data.action === 'death') {
-                if (!this.isDead && !this.respawnState) { this.isDead = true; this.isSpawned = false; this.navPath = []; this.navigateTarget = null; this.respawnState = 'die_sent'; this._sendDie(); }
+                if (!this.isDead && !this.respawnState) { this.isDead = true; this.isSpawned = false; this._clearNavigation('death-command'); this.respawnState = 'die_sent'; this._sendDie(); }
             }
         } else if (eventName === 'auto-patrol') {
             console.log(`[${this.accountId.slice(0,8)}] [AP] SSE received: action=${data.action} servers=${data.servers?.length} switching=${this._switching} active=${this._AP.active} state=${this._AP.state}`);
@@ -657,6 +687,7 @@ class BotSession {
     // ── Handle server messages ──
     _handleMessage(bytes) {
         if (bytes.length === 0) return;
+        this._lastWsMessageAt = Date.now();
         const opcode = bytes[0];
         const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
         if (!this.receivedOpcodes.has(opcode)) {
@@ -785,7 +816,7 @@ class BotSession {
 
         // Opcode 4: Death
         if (opcode === 4) {
-            if (!this.isDead) { this.isDead = true; this.isSpawned = false; this.navPath = []; this.navigateTarget = null; this._resetStuck(); }
+            if (!this.isDead) { this.isDead = true; this.isSpawned = false; this._clearNavigation('death-opcode'); }
             this.apOnDeath();
             this._sendDie();
             this.respawnState = 'die_sent';
@@ -981,6 +1012,7 @@ class BotSession {
         this.apOnSpawned();
         this._processPendingEquip();
         if (!this.pollInterval) this.pollInterval = setInterval(() => this._pollCommand(), 2000);
+        if (this.movementInterval) clearInterval(this.movementInterval);
         this.movementInterval = setInterval(() => {
             if (!this.isSpawned) return;
             this._navigateTick();
@@ -989,28 +1021,99 @@ class BotSession {
 
     _pollCommand() {
         const baseUrl = MAP_SERVER_URL;
+        const params = `?accountId=${encodeURIComponent(this.accountId)}`;
         Promise.all([
-            fetch(new URL('/command', baseUrl)).catch(()=>null),
-            fetch(new URL('/state', baseUrl)).catch(()=>null),
+            fetch(new URL(`/command${params}`, baseUrl)).catch(()=>null),
+            fetch(new URL(`/state${params}`, baseUrl)).catch(()=>null),
         ]).then(([cmdRes, stateRes]) => {
             if (stateRes) return stateRes.json().then(s => { this.serverAttackToggled=!!s.attack; this.serverDefendToggled=!!s.defend; return cmdRes?cmdRes.json():null; });
             return cmdRes?cmdRes.json():null;
         }).then(cmd => {
             if (!cmd) return;
-            if (cmd.action==='navigate') { this.navigateTarget={x:cmd.x,y:cmd.y}; this._computePath(); }
-            else if (cmd.action==='death') { if(!this.isDead&&!this.respawnState){this.isDead=true;this.isSpawned=false;this.navPath=[];this.navigateTarget=null;this.respawnState='die_sent';this._sendDie();} }
-            else if (cmd.action==='title') { if(!this.isDead&&!this.respawnState&&!this.returnToTitle){this.isDead=true;this.isSpawned=false;this.navPath=[];this.navigateTarget=null;this.returnToTitle=true;this.respawnState='die_sent';this._sendDie();} }
+            if (cmd.action==='navigate') { this._setNavigateTarget({x:cmd.x,y:cmd.y}, 'poll-navigate'); }
+            else if (cmd.action==='death') { if(!this.isDead&&!this.respawnState){this.isDead=true;this.isSpawned=false;this._clearNavigation('poll-death');this.respawnState='die_sent';this._sendDie();} }
+            else if (cmd.action==='title') { if(!this.isDead&&!this.respawnState&&!this.returnToTitle){this.isDead=true;this.isSpawned=false;this._clearNavigation('poll-title');this.returnToTitle=true;this.respawnState='die_sent';this._sendDie();} }
             else if (cmd.action==='spawn') { this.returnToTitle=false; if(!this.isSpawned&&this.respawnState!=='spawn_sent'){this._sendSpawn(this.botName);this.respawnState='spawn_sent';} }
             else if (cmd.action==='equip') { if(!this._pendingEquipCmd) this._pendingEquipCmd=cmd; }
             else if (cmd.type==='switch') { this.switchBotServer(cmd.region,cmd.biome); }
-            else if (cmd.action==='patrol') { const r=cmd.route||[]; if(r.length>0){this.navRoute=r;this.navRouteIndex=0;this.navigateTarget={x:r[0].x,y:r[0].y};this._computePath();} }
+            else if (cmd.action==='patrol') { const r=cmd.route||[]; if(r.length>0)this._setRoute(r, 'poll-patrol'); }
         }).catch(()=>{});
     }
 
     // ── Navigation ──
     _resetStuck() {
-        this._stuckCellKey=null; this._franticMode=false;
+        this._stuckCellKey=null; this._franticMode=false; this._franticStartedAt=0;
         this._mobBlockDetouring=false; this._mobBlockWPKey=''; this._mobBlockDefendUntil=0;
+    }
+
+    _clearNavigation(reason = '') {
+        this.navRoute = [];
+        this.navRouteIndex = 0;
+        this.navPath = [];
+        this.navWaypointIndex = 0;
+        this.navigateTarget = null;
+        this.lastComputeCell = null;
+        this._resetStuck();
+        if (reason) console.log(`[${this.accountId.slice(0,8)}] [Nav] cleared: ${reason}`);
+    }
+
+    _setNavigateTarget(target, reason = '') {
+        if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.y)) return false;
+        this.navigateTarget = { x: target.x, y: target.y };
+        this.navPath = [];
+        this.navWaypointIndex = 0;
+        this.lastComputeCell = null;
+        this._resetStuck();
+        this._computePath();
+        if (reason) console.log(`[${this.accountId.slice(0,8)}] [Nav] target set: ${reason} -> ${Math.round(target.x)},${Math.round(target.y)} path=${this.navPath.length}`);
+        return this.navPath.length > 0;
+    }
+
+    _setRoute(route, reason = '') {
+        if (!Array.isArray(route) || route.length === 0) {
+            this._clearNavigation(reason || 'empty-route');
+            return false;
+        }
+        this._clearNavigation(reason || 'set-route');
+        this.navRoute = route;
+        this.navRouteIndex = 0;
+        const ok = this._setNavigateTarget(route[0], reason || 'route-start');
+        if (!ok) return this._advanceRouteWaypoint('route-start-no-path');
+        return true;
+    }
+
+    _advanceRouteWaypoint(reason = '') {
+        this._mobBlockDefending = false;
+        this._mobBlockDetouring = false;
+        this._mobBlockWPKey = '';
+        this._mobBlockDefendUntil = 0;
+        this.navPath = [];
+        this.navWaypointIndex = 0;
+        this.navigateTarget = null;
+        this.lastComputeCell = null;
+        this._resetStuck();
+
+        if (!this.navRoute.length) {
+            this._sendMovement(0, 0);
+            return false;
+        }
+
+        this.navRouteIndex++;
+        if (this.navRouteIndex >= this.navRoute.length) {
+            this.navRoute = [];
+            this.navRouteIndex = 0;
+            this.apOnRouteComplete();
+            this._sendMovement(0, 0);
+            return false;
+        }
+
+        const next = this.navRoute[this.navRouteIndex];
+        const ok = this._setNavigateTarget(next, reason || 'route-advance');
+        if (!ok) {
+            console.log(`[${this.accountId.slice(0,8)}] [Nav] no path to waypoint ${this.navRouteIndex + 1}, skipping`);
+            return this._advanceRouteWaypoint('route-skip-no-path');
+        }
+        return true;
     }
 
     _computePath() {
@@ -1138,11 +1241,8 @@ class BotSession {
                     this._computePath(); this.mapGrid[tgtCY][tgtCX]=pv;
                     if(this.navPath.length===0){
                         console.log(`[MobBlock] No detour after defend, skip WP cell ${tgtCX},${tgtCY}`);
-                        this._mobBlockDetouring=false; this._mobBlockWPKey='';
-                        this.navRouteIndex++;
-                        if(this.navRouteIndex>=this.navRoute.length){this.navRoute=[];this.navRouteIndex=0;this.apOnRouteComplete();this._sendMovement(0,0);return;}
-                        this.navigateTarget={x:this.navRoute[this.navRouteIndex].x,y:this.navRoute[this.navRouteIndex].y};
-                        this._computePath(); return;
+                        this._advanceRouteWaypoint('mob-block-skip');
+                        return;
                     }
                     console.log(`[MobBlock] Detour found after defend for cell ${tgtCX},${tgtCY}`);
                 } else {
@@ -1160,8 +1260,16 @@ class BotSession {
 
         // Frantic mode
         if(this._franticMode){
+            if(this._franticStartedAt&&now-this._franticStartedAt>_FRANTIC_MAX_MS){
+                console.log(`[${this.accountId.slice(0,8)}] [Nav] frantic timeout, skipping current waypoint`);
+                this._franticMode=false;
+                if(this.navRoute.length>0){this._advanceRouteWaypoint('frantic-timeout');return;}
+                this._clearNavigation('frantic-timeout');
+                this._sendMovement(0,0);
+                return;
+            }
             if(Math.abs(botCX-this._franticOriginCX)>=2||Math.abs(botCY-this._franticOriginCY)>=2){
-                this._franticMode=false; this._stuckCellKey=cellKey; this._stuckSince=now;
+                this._franticMode=false; this._franticStartedAt=0; this._stuckCellKey=cellKey; this._stuckSince=now;
                 if(this.navigateTarget) this._computePath();
             } else {
                 if(now>=this._franticDirEnd){this._franticDirIndex=(this._franticDirIndex+1)%_FRANTIC_DIRS.length;this._franticDirEnd=now+300+Math.random()*500;}
@@ -1172,6 +1280,7 @@ class BotSession {
             if(cellKey===this._stuckCellKey){
                 if(now-this._stuckSince>3000){
                     this._franticMode=true; this._franticOriginCX=botCX; this._franticOriginCY=botCY;
+                    this._franticStartedAt=now;
                     this._franticDirIndex=0; this._franticDirEnd=now+300+Math.random()*500;
                     this._stuckCellKey=null; this._sendMovement(_FRANTIC_DIRS[0][0],_FRANTIC_DIRS[0][1],2); return;
                 }
@@ -1183,14 +1292,11 @@ class BotSession {
             const target=this.navRoute[this.navRouteIndex];
             const tCX=Math.floor(target.x/cSize), tCY=Math.floor(target.y/cSize);
             if(Math.abs(botCX-tCX)<=1&&Math.abs(botCY-tCY)<=1){
-        this._mobBlockDefending=false; this._mobBlockDetouring=false; this._mobBlockWPKey=''; this._mobBlockDefendUntil=0;
-                this.navRouteIndex++;
-                if(this.navRouteIndex>=this.navRoute.length){this.navRoute=[];this.navRouteIndex=0;this.apOnRouteComplete();this._sendMovement(0,0);return;}
-                this.navigateTarget={x:this.navRoute[this.navRouteIndex].x,y:this.navRoute[this.navRouteIndex].y};
-                this._computePath(); return;
+                this._advanceRouteWaypoint('route-cell-arrived');
+                return;
             }
             if(!this.navigateTarget||!this.navPath.length||Math.abs(this.navigateTarget.x-target.x)>1||Math.abs(this.navigateTarget.y-target.y)>1){
-                this.navigateTarget={x:target.x,y:target.y}; this._computePath();
+                this._setNavigateTarget(target, 'route-sync');
             }
         }
 
@@ -1211,12 +1317,19 @@ class BotSession {
         if(!this.navPath.length||!this.navigateTarget){this._sendMovement(0,0);return;}
         const wp=this.navPath[this.navWaypointIndex];
         const tgtCX=Math.floor(this.navigateTarget.x/cSize), tgtCY=Math.floor(this.navigateTarget.y/cSize);
-        if(Math.abs(botCX-tgtCX)<=1&&Math.abs(botCY-tgtCY)<=1){this._mobBlockDefending=false;this._mobBlockDetouring=false;this._mobBlockWPKey='';this.navPath=[];this.navigateTarget=null;this._sendMovement(0,0);return;}
+        if(Math.abs(botCX-tgtCX)<=1&&Math.abs(botCY-tgtCY)<=1){
+            if(this.navRoute.length>0){this._advanceRouteWaypoint('target-cell-arrived');return;}
+            this._clearNavigation('target-cell-arrived');
+            this._sendMovement(0,0);
+            return;
+        }
         if(Math.abs(botCX-wp[0])<=1&&Math.abs(botCY-wp[1])<=1){
             this.navWaypointIndex++;
             if(this.navWaypointIndex>=this.navPath.length){
-                if(this._mobBlockDetouring){this._mobBlockDetouring=false;this._mobBlockWPKey='';this.navPath=[];this.navigateTarget=null;this.navRouteIndex++;if(this.navRouteIndex>=this.navRoute.length){this.navRoute=[];this.navRouteIndex=0;this.apOnRouteComplete();this._sendMovement(0,0);return;}this.navigateTarget={x:this.navRoute[this.navRouteIndex].x,y:this.navRoute[this.navRouteIndex].y};this._computePath();return;}
-                else{this.navPath=[];this.navigateTarget=null;this._sendMovement(0,0);return;}
+                if(this.navRoute.length>0){this._advanceRouteWaypoint(this._mobBlockDetouring?'detour-complete':'path-complete');return;}
+                this._clearNavigation('path-complete');
+                this._sendMovement(0,0);
+                return;
             }
             const nwp=this.navPath[this.navWaypointIndex];
             const nwx=(nwp[0]+0.5)*cSize, nwy=(nwp[1]+0.5)*cSize;
@@ -1243,7 +1356,7 @@ class BotSession {
     apStop() {
         this.apClearTimers(); this._AP.active=false; this._AP.state='idle';
         this._AP.pinkyFailCount=0; this._AP.servers=[]; this._AP.serverIndex=0; this._AP.log=[];
-        this.navRoute=[]; this.navRouteIndex=0; this.navPath=[]; this.navigateTarget=null;
+        this._clearNavigation('ap-stop');
         this._sendMovement(0,0); this.apLog('Auto Patrol STOPPED');
     }
     apStart(servers) {
@@ -1271,7 +1384,7 @@ class BotSession {
             this.apLog('All servers completed, entering cooldown');
             this._AP.state='cooldown';
             this.apClearTimers();
-            this.navRoute=[];this.navRouteIndex=0;this.navPath=[];this.navigateTarget=null;
+            this._clearNavigation('ap-cooldown');
             this._cleanup();
             if(this.ws){try{this.ws.close();}catch(e){}this.ws=null;}
             const waitMs=20*60*1000+Math.floor(Math.random()*5*60*1000);
@@ -1337,10 +1450,10 @@ class BotSession {
             this._AP.patrolTimeout=setTimeout(()=>{
                 if(!this._AP.active||this._AP.state!=='patrolling')return;
                 this.apLog('Patrol timeout (10min) → next server');
-                this.navRoute=[];this.navRouteIndex=0;this._AP.serverIndex++;this.apAdvance();
+                this._clearNavigation('ap-patrol-timeout');this._AP.serverIndex++;this.apAdvance();
             },600000);
             const srv=this._AP.servers[this._AP.serverIndex];
-            if(srv?.waypoints?.length>0){this.navRoute=srv.waypoints;this.navRouteIndex=0;this.navigateTarget={x:srv.waypoints[0].x,y:srv.waypoints[0].y};this._computePath();}
+            if(srv?.waypoints?.length>0){this._setRoute(srv.waypoints, 'ap-patrol-start');}
             else{this._AP.serverIndex++;this.apAdvance();}
         }
     }
@@ -1355,10 +1468,10 @@ class BotSession {
             this._AP.patrolTimeout=setTimeout(()=>{
                 if(!this._AP.active||this._AP.state!=='patrolling')return;
                 this.apLog('Patrol timeout (10min) → next server');
-                this.navRoute=[];this.navRouteIndex=0;this._AP.serverIndex++;this.apAdvance();
+                this._clearNavigation('ap-patrol-timeout');this._AP.serverIndex++;this.apAdvance();
             },600000);
             const srv=this._AP.servers[this._AP.serverIndex];
-            if(srv?.waypoints?.length>0){this.navRoute=srv.waypoints;this.navRouteIndex=0;this.navigateTarget={x:srv.waypoints[0].x,y:srv.waypoints[0].y};this._computePath();}
+            if(srv?.waypoints?.length>0){this._setRoute(srv.waypoints, 'ap-patrol-start-pinky');}
             else{this._AP.serverIndex++;this.apAdvance();}
         }
     }
@@ -1370,7 +1483,7 @@ class BotSession {
         } else if(this._AP.state==='patrolling'){
             this.apClearTimers();
             this.apLog('Death during patrol → next server');
-            this.navRoute=[];this.navRouteIndex=0;this._AP.serverIndex++;this.apAdvance();
+            this._clearNavigation('ap-death');this._AP.serverIndex++;this.apAdvance();
         }
     }
     apOnRouteComplete() {
@@ -1381,7 +1494,7 @@ class BotSession {
     _triggerDeath() {
         if(!this.isDead&&!this.respawnState){
             this.isDead=true; this.isSpawned=false;
-            this.navPath=[]; this.navigateTarget=null; this.navRoute=[]; this.navRouteIndex=0;
+            this._clearNavigation('trigger-death');
             this.respawnState='die_sent'; this._sendDie();
         }
     }

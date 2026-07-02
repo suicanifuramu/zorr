@@ -12,11 +12,10 @@ try {
 
 const PORT = 3000;
 const CONTROL_DISCOVERY_PORT = 41235; // UDP port for "I'm here" broadcast to bot
-let latestData = { map: null, position: null, mobs: null, config: null, 'daily-streak': null };
+let latestData = { config: null }; // Global: only config is shared
 let clients = [];
-let commandQueue = []; // FIFO queue: [{ action, ... }, ...]
-let attackToggled = false; // Persistent attack state (bit 0 of action_flags in Opcode 5)
-let defendToggled = false; // Persistent defend state (bit 1 of action_flags in Opcode 5)
+const commandQueues = new Map(); // Map<accountId, Array<{action,...}>>
+const accountStates = new Map(); // Map<accountId, {attack, defend}>
 let gameConfig = null;
 let lastExtractionError = null;
 // Multi-bot: Map<accountId, { client, latestData }>
@@ -262,10 +261,13 @@ const server = http.createServer((req, res) => {
         console.log(`[MapServer] Client connected (${clients.length} total)`);
 
         if (latestData.config) res.write(`data: ${JSON.stringify(latestData.config)}\n\n`);
-        if (latestData.map) res.write(`data: ${JSON.stringify(latestData.map)}\n\n`);
-        if (latestData.position) res.write(`data: ${JSON.stringify(latestData.position)}\n\n`);
-        if (latestData.mobs) res.write(`data: ${JSON.stringify(latestData.mobs)}\n\n`);
-        if (latestData['daily-streak']) res.write(`data: ${JSON.stringify(latestData['daily-streak'])}\n\n`);
+        for (const [id, session] of botSessions) {
+            for (const type of ['map', 'position', 'mobs', 'daily-streak', 'auto-patrol']) {
+                if (session.latestData[type]) {
+                    try { res.write(`data: ${JSON.stringify({ ...session.latestData[type], accountId: id })}\n\n`); } catch(e) {}
+                }
+            }
+        }
 
         req.on('close', () => {
             clients = clients.filter(c => c !== res);
@@ -286,8 +288,9 @@ const server = http.createServer((req, res) => {
         botSessions.set(accountId, sessionData);
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
-        // Initial state push
-        res.write(`event: state\ndata: ${JSON.stringify({ attack: attackToggled, defend: defendToggled })}\n\n`);
+        // Initial state push (per-account)
+        const acctState = accountStates.get(accountId) || { attack: false, defend: false };
+        res.write(`event: state\ndata: ${JSON.stringify({ attack: acctState.attack, defend: acctState.defend })}\n\n`);
         if (trackingConfig.targets.length > 0) {
             res.write(`event: tracking\ndata: ${JSON.stringify({ ...trackingConfig })}\n\n`);
         }
@@ -327,22 +330,20 @@ const server = http.createServer((req, res) => {
             try {
                 const data = JSON.parse(body);
                 const accountId = data.accountId || 'default';
-                const session = botSessions.get(accountId);
+                let session = botSessions.get(accountId);
                 if (!session) {
-                    // No bot session yet, store globally as fallback
+                    // Create ephemeral session so data is still tracked per-account
+                    session = { client: null, latestData: { map: null, position: null, mobs: null, config: null, 'daily-streak': null, 'auto-patrol': null }, username: '' };
+                    botSessions.set(accountId, session);
                     if (!_loggedTypes.has('no-session-' + accountId)) {
                         _loggedTypes.add('no-session-' + accountId);
-                        console.log(`[MapServer] No session for ${accountId.slice(0,8)}, data stored globally`);
+                        console.log(`[MapServer] No session for ${accountId.slice(0,8)}, created ephemeral session`);
                     }
                 }
-                const target = session ? session.latestData : latestData;
-                target[data.type] = data;
-                if (data.type === 'despawn') target.position = null;
-                if (data.type === 'switch') { target.mobs = null; target.map = null; target.position = null; target['auto-patrol'] = null; }
-                // Store username from map or position broadcasts
-                if (session && data.username) {
-                    session.username = data.username;
-                }
+                session.latestData[data.type] = data;
+                if (data.type === 'despawn') session.latestData.position = null;
+                if (data.type === 'switch') { session.latestData.mobs = null; session.latestData.map = null; session.latestData.position = null; session.latestData['auto-patrol'] = null; }
+                if (data.username) session.username = data.username;
 
                 // Broadcast to all viewers with accountId
                 const broadcastData = { ...data, accountId };
@@ -366,11 +367,7 @@ const server = http.createServer((req, res) => {
         req.on('end', () => {
             try {
                 const { x, y, accountId } = JSON.parse(body);
-                // Replace any existing navigate command (only latest target matters)
-                commandQueue = commandQueue.filter(c => c.action !== 'navigate');
                 const cmd = { action: 'navigate', x, y };
-                commandQueue.push(cmd);
-                console.log(`[MapServer] Navigate target set: (${x}, ${y}) (queue: ${commandQueue.length})`);
                 // Push to bot for immediate processing (skip 2s poll latency)
                 _sendToBots('navigate', cmd, accountId);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -384,35 +381,54 @@ const server = http.createServer((req, res) => {
     }
 
     if (req.url === '/navigate' && req.method === 'DELETE') {
-        commandQueue = commandQueue.filter(c => c.action !== 'navigate');
-        // Also clear any active patrol route on the bot
-        _sendToBots('navigate', { action: 'stop' });
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId');
+        if (accountId) {
+            const q = commandQueues.get(accountId);
+            if (q) { const idx = q.findIndex(c => c.action === 'navigate'); if (idx >= 0) q.splice(idx, 1); }
+            _sendToBots('navigate', { action: 'stop' }, accountId);
+        } else {
+            for (const [, q] of commandQueues) { const idx = q.findIndex(c => c.action === 'navigate'); if (idx >= 0) q.splice(idx, 1); }
+            _sendToBots('navigate', { action: 'stop' });
+        }
         res.writeHead(200);
         res.end(JSON.stringify({ ok: true }));
         return;
     }
 
     if (req.url === '/death' && req.method === 'POST') {
-        commandQueue.push({ action: 'death' });
-        console.log(`[MapServer] Death command queued (queue: ${commandQueue.length})`);
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId') || 'default';
+        const q = commandQueues.get(accountId) || [];
+        if (!commandQueues.has(accountId)) commandQueues.set(accountId, q);
+        q.push({ action: 'death' });
+        console.log(`[MapServer] Death command queued for ${accountId.slice(0,8)} (queue: ${q.length})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
     }
 
     if (req.url === '/title' && req.method === 'POST') {
-        commandQueue.push({ action: 'title' });
-        console.log(`[MapServer] Title command queued (queue: ${commandQueue.length})`);
-        _sendToBots('command', { action: 'title' });
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId') || 'default';
+        const q = commandQueues.get(accountId) || [];
+        if (!commandQueues.has(accountId)) commandQueues.set(accountId, q);
+        q.push({ action: 'title' });
+        console.log(`[MapServer] Title command queued for ${accountId.slice(0,8)} (queue: ${q.length})`);
+        _sendToBots('command', { action: 'title' }, accountId !== 'default' ? accountId : null);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
     }
 
     if (req.url === '/spawn' && req.method === 'POST') {
-        commandQueue.push({ action: 'spawn' });
-        console.log(`[MapServer] Spawn command queued (queue: ${commandQueue.length})`);
-        _sendToBots('command', { action: 'spawn' });
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId') || 'default';
+        const q = commandQueues.get(accountId) || [];
+        if (!commandQueues.has(accountId)) commandQueues.set(accountId, q);
+        q.push({ action: 'spawn' });
+        console.log(`[MapServer] Spawn command queued for ${accountId.slice(0,8)} (queue: ${q.length})`);
+        _sendToBots('command', { action: 'spawn' }, accountId !== 'default' ? accountId : null);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
         return;
@@ -426,8 +442,12 @@ const server = http.createServer((req, res) => {
                 const data = JSON.parse(body);
                 const cmd = { action: 'equip', buildFile: data.buildFile || 'loadouts/move.txt', buildCode: data.buildCode || null, talents: data.talents || null };
                 const accountId = data.accountId || null;
-                commandQueue.push(cmd);
-                console.log(`[MapServer] Equip command queued (queue: ${commandQueue.length}, target: ${accountId || 'all'})`);
+                if (accountId) {
+                    const q = commandQueues.get(accountId) || [];
+                    if (!commandQueues.has(accountId)) commandQueues.set(accountId, q);
+                    q.push(cmd);
+                }
+                console.log(`[MapServer] Equip command queued (target: ${accountId || 'all'})`);
                 _sendToBots('equip', cmd, accountId);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ ok: true }));
@@ -440,11 +460,29 @@ const server = http.createServer((req, res) => {
     }
 
     if (req.url === '/attack/toggle' && req.method === 'POST') {
-        attackToggled = !attackToggled;
-        console.log(`[MapServer] Attack toggled: ${attackToggled ? 'ON' : 'OFF'}`);
-        _sendToBots('state', { attack: attackToggled, defend: defendToggled });
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, active: attackToggled }));
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId');
+        if (accountId) {
+            const st = accountStates.get(accountId) || { attack: false, defend: false };
+            st.attack = !st.attack;
+            accountStates.set(accountId, st);
+            console.log(`[MapServer] Attack toggled for ${accountId.slice(0,8)}: ${st.attack ? 'ON' : 'OFF'}`);
+            _sendToBots('state', { attack: st.attack, defend: st.defend }, accountId);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, active: st.attack }));
+        } else {
+            // Fallback: toggle all
+            for (const [id] of botSessions) {
+                const st = accountStates.get(id) || { attack: false, defend: false };
+                st.attack = !st.attack;
+                accountStates.set(id, st);
+            }
+            const anyState = accountStates.values().next().value || { attack: false };
+            console.log(`[MapServer] Attack toggled (all): ${anyState.attack ? 'ON' : 'OFF'}`);
+            _sendToBots('state', { attack: anyState.attack, defend: anyState.defend });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, active: anyState.attack }));
+        }
         return;
     }
 
@@ -461,32 +499,29 @@ const server = http.createServer((req, res) => {
         req.on('data', (c) => { body += c; if (body.length > 256) req.destroy(); });
         req.on('end', () => {
             try {
-                const { region, biome } = JSON.parse(body || '{}');
+                const { region, biome, accountId } = JSON.parse(body || '{}');
                 if (!region || !biome) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ ok: false, error: 'region and biome required' }));
                     return;
                 }
-                // Immediately clear stale viewer state so any concurrent
-                // /mapdata safety poll or freshly-connected SSE client
-                // cannot replay mobs/map from the previous server.
-                latestData.mobs = null;
-                latestData.map = null;
-                latestData.position = null;
-                // Notify all SSE subscribers so they can wipe their local
-                // state too (defense in depth — switchServer() on the
-                // viewer also does this immediately, but a second viewer
-                // opened in another tab gets the SSE notification).
-                const switchEvt = { type: 'switch', region, biome };
+                // Clear only the specified account's data
+                const targetId = accountId || 'default';
+                const session = botSessions.get(targetId);
+                if (session) {
+                    session.latestData.mobs = null;
+                    session.latestData.map = null;
+                    session.latestData.position = null;
+                    session.latestData['auto-patrol'] = null;
+                }
+                // Notify all SSE subscribers with accountId
+                const switchEvt = { type: 'switch', region, biome, accountId: targetId };
                 const cSnapshot = clients.slice();
                 for (const client of cSnapshot) {
                     try { client.write(`data: ${JSON.stringify(switchEvt)}\n\n`); } catch (e) { /* ignore */ }
                 }
-                // Append to commandQueue; bot polls it (or we can
-                // push via SSE, but the bot doesn't subscribe to anything
-                // other than UDP discovery). Use commandQueue + bot poll.
-                commandQueue.push({ type: 'switch', region, biome });
-                console.log(`[MapServer] Queued switch: ${region}/${biome} (queue=${commandQueue.length})`);
+                _sendToBots('command', { type: 'switch', region, biome }, accountId);
+                console.log(`[MapServer] Queued switch: ${region}/${biome} for ${targetId.slice(0,8)}`);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ ok: true, queued: true, region, biome }));
             } catch (e) {
@@ -498,17 +533,44 @@ const server = http.createServer((req, res) => {
     }
 
     if (req.url === '/defend/toggle' && req.method === 'POST') {
-        defendToggled = !defendToggled;
-        console.log(`[MapServer] Defend toggled: ${defendToggled ? 'ON' : 'OFF'}`);
-        _sendToBots('state', { attack: attackToggled, defend: defendToggled });
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, active: defendToggled }));
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId');
+        if (accountId) {
+            const st = accountStates.get(accountId) || { attack: false, defend: false };
+            st.defend = !st.defend;
+            accountStates.set(accountId, st);
+            console.log(`[MapServer] Defend toggled for ${accountId.slice(0,8)}: ${st.defend ? 'ON' : 'OFF'}`);
+            _sendToBots('state', { attack: st.attack, defend: st.defend }, accountId);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, active: st.defend }));
+        } else {
+            for (const [id] of botSessions) {
+                const st = accountStates.get(id) || { attack: false, defend: false };
+                st.defend = !st.defend;
+                accountStates.set(id, st);
+            }
+            const anyState = accountStates.values().next().value || { defend: false };
+            console.log(`[MapServer] Defend toggled (all): ${anyState.defend ? 'ON' : 'OFF'}`);
+            _sendToBots('state', { attack: anyState.attack, defend: anyState.defend });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, active: anyState.defend }));
+        }
         return;
     }
 
-    if (req.url === '/state' && req.method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ attack: attackToggled, defend: defendToggled }));
+    if (req.url.startsWith('/state') && req.method === 'GET') {
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId');
+        if (accountId) {
+            const st = accountStates.get(accountId) || { attack: false, defend: false };
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ attack: st.attack, defend: st.defend }));
+        } else {
+            // Return first account's state or defaults
+            const anyState = accountStates.values().next().value || { attack: false, defend: false };
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ attack: anyState.attack, defend: anyState.defend }));
+        }
         return;
     }
 
@@ -577,11 +639,22 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    if (req.url === '/command' && req.method === 'GET') {
+    if (req.url.startsWith('/command') && req.method === 'GET') {
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId');
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        if (commandQueue.length > 0) {
-            res.end(JSON.stringify(commandQueue.shift()));
+        if (accountId) {
+            const q = commandQueues.get(accountId);
+            if (q && q.length > 0) {
+                res.end(JSON.stringify(q.shift()));
+            } else {
+                res.end(JSON.stringify({ action: 'none' }));
+            }
         } else {
+            // Legacy fallback: return from any queue
+            for (const [, q] of commandQueues) {
+                if (q.length > 0) { res.end(JSON.stringify(q.shift())); return; }
+            }
             res.end(JSON.stringify({ action: 'none' }));
         }
         return;
@@ -612,9 +685,19 @@ const server = http.createServer((req, res) => {
     }
 
     if (req.url === '/ack' && req.method === 'POST') {
-        commandQueue.shift();
+        const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+        const accountId = parsedUrl.searchParams.get('accountId');
+        let remaining = 0;
+        if (accountId) {
+            const q = commandQueues.get(accountId);
+            if (q && q.length > 0) q.shift();
+            remaining = q ? q.length : 0;
+        } else {
+            for (const [, q] of commandQueues) { if (q.length > 0) { q.shift(); break; } }
+            for (const [, q] of commandQueues) remaining += q.length;
+        }
         res.writeHead(200);
-        res.end(JSON.stringify({ ok: true, remaining: commandQueue.length }));
+        res.end(JSON.stringify({ ok: true, remaining }));
         return;
     }
 
@@ -718,6 +801,7 @@ const server = http.createServer((req, res) => {
         for (const [id, session] of botSessions) {
             const status = session.latestData['auto-patrol'] || {};
             const map = session.latestData.map || {};
+            const position = session.latestData.position || {};
             accounts.push({
                 accountId: id,
                 username: session.username || '',
@@ -725,6 +809,17 @@ const server = http.createServer((req, res) => {
                 biomeName: map.biomeName || '',
                 mapName: map.mapName || '',
                 region: map.region || '',
+                serverUrl: position.serverUrl || map.serverUrl || status.serverUrl || '',
+                lastWsMessageAt: position.lastWsMessageAt || map.lastWsMessageAt || status.lastWsMessageAt || 0,
+                lastMapAt: map.botTs || 0,
+                lastPositionAt: position.botTs || 0,
+                wsStaleMs: (position.lastWsMessageAt || map.lastWsMessageAt || status.lastWsMessageAt) ? Date.now() - (position.lastWsMessageAt || map.lastWsMessageAt || status.lastWsMessageAt) : null,
+                mapStaleMs: map.botTs ? Date.now() - map.botTs : null,
+                positionStaleMs: position.botTs ? Date.now() - position.botTs : null,
+                navRouteIndex: position.navRouteIndex ?? status.navRouteIndex ?? 0,
+                navRouteCount: position.navRouteCount ?? status.navRouteCount ?? 0,
+                navWaypointIndex: position.navWaypointIndex ?? status.navWaypointIndex ?? 0,
+                navigateTarget: position.navigateTarget || status.navigateTarget || null,
                 state: status.state || 'idle',
                 active: status.active || false,
                 serverIndex: status.serverIndex || 0,
