@@ -755,6 +755,12 @@ class BotSession {
                     this._sendEncrypted(new Uint8Array([119, 0]));
                     this._sendSpawn(this.botName);
                     this.spawnSent = true;
+                    // Fallback: force _onSpawned if opcode 3 didn't trigger within 3s
+                    if (!this.isSpawned) {
+                        setTimeout(() => {
+                            if (!this.isSpawned) { this.isSpawned = true; this._onSpawned(); }
+                        }, 3000);
+                    }
                 }, 500);
             }
         }
