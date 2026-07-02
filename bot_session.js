@@ -232,7 +232,7 @@ class BotSession {
         this._mobBlockWPKey = '';
 
         // Auto patrol
-        this._AP = { active: false, state: 'idle', pinkyFailCount: 0, pinkyTimeout: null, servers: [], serverIndex: 0, buildSwitchTimeout: null, log: [], routes: {} };
+        this._AP = { active: false, state: 'idle', pinkyFailCount: 0, pinkyTimeout: null, servers: [], serverIndex: 0, buildSwitchTimeout: null, cooldownTimer: null, log: [], routes: {} };
 
         // Server toggles
         this.serverAttackToggled = false;
@@ -315,6 +315,7 @@ class BotSession {
         this.ws.on('message', (data) => { this._handleMessage(new Uint8Array(data)); });
         this.ws.on('close', (code, reason) => {
             if (myEpoch !== this._connectEpoch || myCounter !== this._connectCounter) return;
+            if (this._AP.state === 'cooldown') return;
             const tag2 = `[${this.accountId.slice(0,8)}]`;
             console.log(`${tag2} [Bot] Connection closed (${code}). Reconnecting in 5s...`);
             if (this._AP.active && this._AP.state !== 'idle' && this._AP.state !== 'next_server') {
@@ -1232,7 +1233,7 @@ class BotSession {
         if(this._AP.log.length>AP_LOG_MAX) this._AP.log.shift();
         this._broadcastMapData({type:'auto-patrol',session:this._currentSessionId,state:this._AP.state,pinkyFailCount:this._AP.pinkyFailCount,active:this._AP.active,currentServer:this._AP.servers[this._AP.serverIndex]||null,serverIndex:this._AP.serverIndex,serverCount:this._AP.servers.length,log:this._AP.log.slice(-10)});
     }
-    apClearTimers() { if(this._AP.pinkyTimeout){clearTimeout(this._AP.pinkyTimeout);this._AP.pinkyTimeout=null;} if(this._AP.buildSwitchTimeout){clearTimeout(this._AP.buildSwitchTimeout);this._AP.buildSwitchTimeout=null;} }
+    apClearTimers() { if(this._AP.pinkyTimeout){clearTimeout(this._AP.pinkyTimeout);this._AP.pinkyTimeout=null;} if(this._AP.buildSwitchTimeout){clearTimeout(this._AP.buildSwitchTimeout);this._AP.buildSwitchTimeout=null;} if(this._AP.cooldownTimer){clearTimeout(this._AP.cooldownTimer);this._AP.cooldownTimer=null;} }
     apStop() {
         this.apClearTimers(); this._AP.active=false; this._AP.state='idle';
         this._AP.pinkyFailCount=0; this._AP.servers=[]; this._AP.serverIndex=0; this._AP.log=[];
@@ -1260,7 +1261,26 @@ class BotSession {
     }
     apAdvance() {
         if(!this._AP.active)return;
-        if(this._AP.serverIndex>=this._AP.servers.length){this.apLog('All servers completed, looping');this._AP.serverIndex=0;}
+        if(this._AP.serverIndex>=this._AP.servers.length){
+            this.apLog('All servers completed, entering cooldown');
+            this._AP.state='cooldown';
+            this.apClearTimers();
+            this.navRoute=[];this.navRouteIndex=0;this.navPath=[];this.navigateTarget=null;
+            this._cleanup();
+            if(this.ws){try{this.ws.close();}catch(e){}this.ws=null;}
+            const waitMs=20*60*1000+Math.floor(Math.random()*5*60*1000);
+            this.apLog(`Cooldown: ${Math.round(waitMs/60000)} min`);
+            this._AP.cooldownTimer=setTimeout(()=>{
+                if(!this._AP.active)return;
+                this._AP.serverIndex=0;this._AP.pinkyFailCount=0;
+                this.apLog('Cooldown done, restarting loop');
+                const srv=this._AP.servers[0];
+                if(!srv){this.apStop();return;}
+                this._AP.state='next_server';
+                this.switchBotServer(srv.region,srv.biome);
+            },waitMs);
+            return;
+        }
         const srv=this._AP.servers[this._AP.serverIndex];
         if(!srv){this.apStop();return;}
         this.apLog(`→ ${srv.region}-${srv.biome} (${this._AP.serverIndex+1}/${this._AP.servers.length})`);
