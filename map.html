@@ -2458,9 +2458,12 @@
             document.querySelectorAll('#ping-rars .ping-checkbox:checked').forEach(cb => rarities.push(Number(cb.dataset.id)));
             for (const slug of checkedSlugs) {
                 if (slug === '') {
-                    pingRules.rules = pingRules.rules.filter(r => r.slug !== '');
+                    pingRules.rules = pingRules.rules.filter(r => r.slug !== '' || r.roleId);
                 }
-                pingRules.rules.push({ slug, variants, rarities, roleId });
+                const dup = pingRules.rules.some(r => r.slug === slug && r.roleId === roleId);
+                if (!dup) {
+                    pingRules.rules.push({ slug, variants, rarities, roleId });
+                }
             }
             renderPingRules();
             anyMobSelected = false;
