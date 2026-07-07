@@ -875,7 +875,7 @@ const server = http.createServer((req, res) => {
             try {
                 const data = JSON.parse(body);
                 if (data.rules && Array.isArray(data.rules)) {
-                    pingRules.rules = data.rules;
+                    pingRules.rules = data.rules.filter(r => r.roleId);
                 }
                 savePingRules();
                 pushPingRulesToBot();
