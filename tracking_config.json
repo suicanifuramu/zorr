@@ -5,7 +5,8 @@
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -35,7 +36,8 @@
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -68,9 +70,16 @@
     },
     {
       "slug": "spider_cave",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2,
+        11
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "spider_yoba",
@@ -92,7 +101,7 @@
     },
     {
       "slug": "bee",
-      "enabled": true,
+      "enabled": false,
       "variants": [
         0,
         1,
@@ -144,9 +153,15 @@
     },
     {
       "slug": "rock",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "spider",
@@ -192,16 +207,23 @@
     },
     {
       "slug": "desert_centipede",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "fire_ant_hole",
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -400,16 +422,23 @@
     },
     {
       "slug": "shark",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "shipwreck",
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -518,9 +547,15 @@
     },
     {
       "slug": "sponge",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "starfish",
@@ -605,7 +640,8 @@
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -792,16 +828,23 @@
     },
     {
       "slug": "bugatti",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "dragon_nest",
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -835,7 +878,8 @@
         3,
         4,
         5,
-        6
+        6,
+        11
       ],
       "rarities": [
         8,
@@ -874,9 +918,16 @@
     },
     {
       "slug": "arctic_spider_cave",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2,
+        11
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "ice_cube",
@@ -914,6 +965,7 @@
         17
       ],
       "rarities": [
+        7,
         8,
         9
       ]
@@ -1090,9 +1142,31 @@
     },
     {
       "slug": "biologist",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "parasite",
@@ -1111,7 +1185,8 @@
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -1138,9 +1213,15 @@
     },
     {
       "slug": "cicada_3301",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "ghost",
@@ -1180,7 +1261,13 @@
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        3,
+        4,
+        5,
+        6,
+        9,
+        17
       ],
       "rarities": [
         8,
@@ -1198,7 +1285,9 @@
       "enabled": true,
       "variants": [
         2,
-        6
+        5,
+        6,
+        17
       ],
       "rarities": [
         8,
@@ -1217,9 +1306,20 @@
       "variants": [
         1,
         2,
+        3,
         4,
         5,
         6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
         17
       ],
       "rarities": [
@@ -1229,9 +1329,31 @@
     },
     {
       "slug": "alien_digger",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "black_hole",
@@ -1239,7 +1361,8 @@
       "variants": [
         4,
         5,
-        6
+        6,
+        17
       ],
       "rarities": [
         8,
@@ -1278,7 +1401,7 @@
     },
     {
       "slug": "ufo",
-      "enabled": false,
+      "enabled": true,
       "variants": [
         0,
         1,
@@ -1310,7 +1433,8 @@
       "variants": [
         4,
         5,
-        6
+        6,
+        17
       ],
       "rarities": [
         8,
@@ -1334,7 +1458,8 @@
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -1373,9 +1498,31 @@
     },
     {
       "slug": "vampire_digger",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "baby_rat",
@@ -1388,7 +1535,8 @@
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -1430,7 +1578,8 @@
       "enabled": true,
       "variants": [
         1,
-        2
+        2,
+        11
       ],
       "rarities": [
         8,
@@ -1481,7 +1630,7 @@
     },
     {
       "slug": "tyrannosaurus",
-      "enabled": false,
+      "enabled": true,
       "variants": [
         0,
         1,
@@ -1499,6 +1648,7 @@
         13,
         14,
         15,
+        16,
         17
       ],
       "rarities": [
@@ -1520,7 +1670,7 @@
     },
     {
       "slug": "elasmosaurus",
-      "enabled": false,
+      "enabled": true,
       "variants": [
         0,
         1,
@@ -1538,6 +1688,7 @@
         13,
         14,
         15,
+        16,
         17
       ],
       "rarities": [
@@ -1547,7 +1698,7 @@
     },
     {
       "slug": "nigersaurus",
-      "enabled": false,
+      "enabled": true,
       "variants": [
         0,
         1,
@@ -1565,6 +1716,7 @@
         13,
         14,
         15,
+        16,
         17
       ],
       "rarities": [
@@ -1673,12 +1825,6 @@
         17
       ],
       "rarities": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
         6,
         7,
         8,
