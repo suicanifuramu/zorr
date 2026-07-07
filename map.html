@@ -2339,6 +2339,7 @@
         let pingSearchQuery = '';
         let pingExpanded = false;
         let roleCache = {};
+        let anyMobSelected = false;
 
         function switchTrackingView(view) {
             document.querySelectorAll('.tracking-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
@@ -2405,7 +2406,6 @@
             const countEl = document.getElementById('ping-mob-count');
             const moreBtn = document.getElementById('ping-mob-more');
             if (!el) return;
-            const hasAnyRule = pingRules.rules.some(r => !r.slug);
             const allSlugs = getFilteredMobSlugs();
             const show = pingExpanded ? allSlugs : allSlugs.slice(0, 20);
             const anyDisabled = '';
@@ -2414,7 +2414,7 @@
                 if (allSlugs.length <= 20) { moreBtn.style.display = 'none'; }
                 else { moreBtn.style.display = 'block'; moreBtn.textContent = pingExpanded ? 'Show Less' : `Show All (${allSlugs.length} mobs)`; }
             }
-            const anyChecked = hasAnyRule ? ' checked' : '';
+            const anyChecked = anyMobSelected ? ' checked' : '';
             let html = `<label class="ping-mob-label ping-mob-any"><input type="checkbox" class="ping-mob-checkbox" data-slug=""${anyChecked}${anyDisabled}> (Any Mob - variant/rarity only)</label>`;
 
             html += show.map(slug => {
@@ -2463,6 +2463,7 @@
                 pingRules.rules.push({ slug, variants, rarities, roleId });
             }
             renderPingRules();
+            anyMobSelected = false;
             renderPingMobList();
             document.getElementById('ping-role-id-input').value = '';
             document.querySelectorAll('.ping-checkbox').forEach(cb => cb.checked = false);
@@ -2563,6 +2564,7 @@
             // Any Mob toggle → add/remove uncommitted placeholder
             if (e.target.classList.contains('ping-mob-checkbox') && e.target.dataset.slug === '') {
                 const checked = e.target.checked;
+                anyMobSelected = checked;
                 if (checked) {
                     if (!pingRules.rules.some(r => !r.slug)) {
                         pingRules.rules.push({ slug: '', variants: [], rarities: [] });
