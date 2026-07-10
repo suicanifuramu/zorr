@@ -72,8 +72,6 @@
       "slug": "spider_cave",
       "enabled": true,
       "variants": [
-        1,
-        2,
         11
       ],
       "rarities": [
@@ -207,15 +205,9 @@
     },
     {
       "slug": "desert_centipede",
-      "enabled": true,
-      "variants": [
-        1,
-        2
-      ],
-      "rarities": [
-        8,
-        9
-      ]
+      "enabled": false,
+      "variants": [],
+      "rarities": []
     },
     {
       "slug": "fire_ant_hole",
@@ -314,9 +306,15 @@
     },
     {
       "slug": "cicada",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "fossil",
@@ -422,15 +420,9 @@
     },
     {
       "slug": "shark",
-      "enabled": true,
-      "variants": [
-        1,
-        2
-      ],
-      "rarities": [
-        8,
-        9
-      ]
+      "enabled": false,
+      "variants": [],
+      "rarities": []
     },
     {
       "slug": "shipwreck",
@@ -547,15 +539,9 @@
     },
     {
       "slug": "sponge",
-      "enabled": true,
-      "variants": [
-        1,
-        2
-      ],
-      "rarities": [
-        8,
-        9
-      ]
+      "enabled": false,
+      "variants": [],
+      "rarities": []
     },
     {
       "slug": "starfish",
@@ -830,8 +816,24 @@
       "slug": "bugatti",
       "enabled": true,
       "variants": [
+        0,
         1,
-        2
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
       ],
       "rarities": [
         8,
@@ -921,8 +923,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -1265,9 +1266,7 @@
         3,
         4,
         5,
-        6,
-        9,
-        17
+        6
       ],
       "rarities": [
         8,
@@ -1286,8 +1285,7 @@
       "variants": [
         2,
         5,
-        6,
-        17
+        6
       ],
       "rarities": [
         8,
@@ -1310,16 +1308,6 @@
         4,
         5,
         6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        12,
-        13,
-        14,
-        15,
-        16,
         17
       ],
       "rarities": [
@@ -1361,8 +1349,7 @@
       "variants": [
         4,
         5,
-        6,
-        17
+        6
       ],
       "rarities": [
         8,
@@ -1433,8 +1420,7 @@
       "variants": [
         4,
         5,
-        6,
-        17
+        6
       ],
       "rarities": [
         8,
@@ -1450,8 +1436,15 @@
     {
       "slug": "bat",
       "enabled": false,
-      "variants": [],
-      "rarities": []
+      "variants": [
+        1,
+        2,
+        14
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "manhole",
@@ -1630,7 +1623,7 @@
     },
     {
       "slug": "tyrannosaurus",
-      "enabled": true,
+      "enabled": false,
       "variants": [
         0,
         1,
@@ -1648,7 +1641,6 @@
         13,
         14,
         15,
-        16,
         17
       ],
       "rarities": [
@@ -1670,7 +1662,7 @@
     },
     {
       "slug": "elasmosaurus",
-      "enabled": true,
+      "enabled": false,
       "variants": [
         0,
         1,
@@ -1688,7 +1680,6 @@
         13,
         14,
         15,
-        16,
         17
       ],
       "rarities": [
