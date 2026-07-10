@@ -1387,7 +1387,7 @@ class BotSession {
             this._clearNavigation('ap-cooldown');
             this._cleanup();
             if(this.ws){try{this.ws.close();}catch(e){}this.ws=null;}
-            const waitMs=20*60*1000+Math.floor(Math.random()*5*60*1000);
+            const waitMs=10*60*1000+Math.floor(Math.random()*3*60*1000);
             this.apLog(`Cooldown: ${Math.round(waitMs/60000)} min`);
             this._AP.cooldownTimer=setTimeout(()=>{
                 if(!this._AP.active)return;
