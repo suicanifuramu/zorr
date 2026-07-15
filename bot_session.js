@@ -721,13 +721,21 @@ class BotSession {
                 const usernameLen = view.getUint8(v);
                 this.username = Buffer.from(bytes.buffer, bytes.byteOffset + v + 1, usernameLen).toString('utf8');
                 v += 1 + usernameLen;
-                const descLen = view.getUint16(v); v += 2; v += descLen;
-                const lobbyFlag = view.getUint8(v++);
+                // Updated login packet (post game-update): the old desc/lobbyFlag
+                // fields were replaced by a second length-prefixed name plus a
+                // trailing float, all before mapName.
+                v += 1; // unk1 (was lobbyFlag slot)
+                const displayNameLen = view.getUint8(v);
+                this.displayName = Buffer.from(bytes.buffer, bytes.byteOffset + v + 1, displayNameLen).toString('utf8');
+                v += 1 + displayNameLen;
+                v += 1; // unk2
+                v += 4; // unkFloat
                 const mapNameLen = view.getUint8(v++);
                 this.mapName = Buffer.from(bytes.buffer, bytes.byteOffset + v, mapNameLen).toString('utf8'); v += mapNameLen;
                 const biomeNameLen = view.getUint8(v++);
                 this.biomeName = Buffer.from(bytes.buffer, bytes.byteOffset + v, biomeNameLen).toString('utf8'); v += biomeNameLen;
-                this.gridWidth = view.getUint32(v); v += 4;
+                v += 3; // padding before gridWidth (gridWidth is now a single byte)
+                this.gridWidth = view.getUint8(v); v += 1;
                 const gridArea = this.gridWidth * this.gridWidth;
                 const gridBytes = Math.ceil(gridArea / 8);
                 this.mapGrid = [];
@@ -741,30 +749,14 @@ class BotSession {
                 v += gridBytes;
                 this._distanceMap = buildDistanceMap(this.mapGrid, this.gridWidth, this.gridWidth);
 
-                const slotsCount = view.getUint8(v++);
+                // The post-grid section (equipped petals / inventory / skins /
+                // talents / daily-streak) changed format in the same game update
+                // that altered the login packet: it now carries entity data, so the
+                // original field offsets no longer apply. Leave these structures
+                // empty until re-decoded to avoid ingesting entity bytes as garbage
+                // petals/inventory.
                 this.botEquippedPetals = [];
-                for (let t = 0; t < slotsCount * 2; t++) {
-                    const val = view.getUint16(v) - 1; v += 2;
-                    if (val !== -1) {
-                        const [pi, ri] = decodeItemValue(val);
-                        this.botEquippedPetals.push({ petalName: this._petalNames[pi] || `Petal_${pi}`, rarityName: this._rarities[ri]?.name || `R${ri}` });
-                    }
-                }
-                const inventoryCount = view.getUint16(v); v += 2;
                 this.botInventory = {};
-                for (let t = 0; t < inventoryCount; t++) { const pk = view.getUint16(v); v += 2; const cnt = view.getUint32(v); v += 4; this.botInventory[pk] = cnt; }
-
-                // Skip skins/mobSkins/talents
-                v += view.getUint8(v++); // skins
-                v += view.getUint8(v++); // mobSkins
-                v += view.getUint8(v++); // talents
-
-                // Streak data
-                if (v + 10 <= bytes.length) {
-                    this.streakData.count = view.getUint16(v); v += 2;
-                    this.streakData.lastClaimTime = view.getUint32(v) * 1000; v += 4;
-                    this.streakData.nextClaimDeadline = view.getUint32(v) * 1000; v += 4;
-                }
 
                 // Broadcast map
                 const _urlMatch = this.serverUrl.match(/s-([a-z]+)-([a-z]+)\./);
