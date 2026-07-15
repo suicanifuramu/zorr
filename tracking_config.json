@@ -199,9 +199,15 @@
     },
     {
       "slug": "cactus",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "desert_centipede",
@@ -521,9 +527,15 @@
     },
     {
       "slug": "pirate_digger",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "shell",
@@ -539,9 +551,15 @@
     },
     {
       "slug": "sponge",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "starfish",
@@ -744,8 +762,11 @@
     },
     {
       "slug": "hel_digger",
-      "enabled": false,
-      "variants": [],
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
       "rarities": []
     },
     {
@@ -756,9 +777,15 @@
     },
     {
       "slug": "hel_queen_bee",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "hel_worm",
@@ -855,14 +882,23 @@
     },
     {
       "slug": "firestorm",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "hel_beekeeper",
-      "enabled": false,
-      "variants": [],
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
       "rarities": []
     },
     {
@@ -908,9 +944,15 @@
     },
     {
       "slug": "volcano",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "arctic_centipede",
@@ -932,9 +974,15 @@
     },
     {
       "slug": "ice_cube",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "ice_hornet",
@@ -991,9 +1039,15 @@
     },
     {
       "slug": "frost_digger",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "ice_dragon",
@@ -1114,8 +1168,14 @@
     {
       "slug": "red_blood_cell",
       "enabled": false,
-      "variants": [],
-      "rarities": []
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "virus",
@@ -1125,9 +1185,15 @@
     },
     {
       "slug": "atom",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "bacteriophage",
@@ -1196,9 +1262,15 @@
     },
     {
       "slug": "white_blood_cell",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "alien",
@@ -1295,8 +1367,14 @@
     {
       "slug": "unabomber",
       "enabled": false,
-      "variants": [],
-      "rarities": []
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "zatan",
@@ -1370,9 +1448,15 @@
     },
     {
       "slug": "grave_digger",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "illuminati",
@@ -1429,13 +1513,19 @@
     },
     {
       "slug": "acid_bubble",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "bat",
-      "enabled": false,
+      "enabled": true,
       "variants": [
         1,
         2,
@@ -1485,9 +1575,15 @@
     },
     {
       "slug": "trash_digger",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "vampire_digger",
@@ -1623,7 +1719,7 @@
     },
     {
       "slug": "tyrannosaurus",
-      "enabled": false,
+      "enabled": true,
       "variants": [
         0,
         1,
