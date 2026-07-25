@@ -342,7 +342,7 @@ const server = http.createServer((req, res) => {
                 }
                 session.latestData[data.type] = data;
                 if (data.type === 'despawn') session.latestData.position = null;
-                if (data.type === 'switch') { session.latestData.mobs = null; session.latestData.map = null; session.latestData.position = null; session.latestData['auto-patrol'] = null; }
+                if (data.type === 'switch') { session.latestData.mobs = null; session.latestData.map = null; session.latestData.position = null; }
                 if (data.username) session.username = data.username;
 
                 // Broadcast to all viewers with accountId

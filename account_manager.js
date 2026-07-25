@@ -3,12 +3,15 @@ const path = require('path');
 const http = require('http');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { BotSession } = require('./bot_session');
+const { invalidateCache } = require('./extraction_pipeline');
 
 // ── Shared game data (loaded once, shared across all BotSessions) ──
 let gameData = null;
 
 async function loadGameData() {
     console.log('[AccountManager] Loading shared game data...');
+    // Always fetch fresh game data so the protocol version matches the live server.
+    invalidateCache();
     const { extractGameData } = require('./game_data_extractor');
     gameData = await extractGameData({ includeSource: true });
     if (gameData.schemaVersion !== 2) {
@@ -213,11 +216,22 @@ async function main() {
         const proxyUrl = entry.proxy ? entry.proxy.url : null;
         const session = new BotSession(accountId, sharedData, null, entry.buildNumber, proxyUrl);
         sessions.push(session);
+        // Start on the first assigned server instead of the hard-coded default.
+        if (distributions[i] && distributions[i].length > 0) {
+            const first = distributions[i][0];
+            session.serverUrl = `wss://s-${first.region}-${first.biome}.zorr.pro/`;
+        }
         const buildTag = entry.buildNumber ? ` (build${entry.buildNumber})` : '';
         const proxyTag = entry.proxy ? ` [proxy: ${entry.proxy.url}]` : '';
         setTimeout(() => {
             console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}${proxyTag}`);
             session.start(distributions[i]);
+            // Begin auto-patrol immediately using the assigned server distribution.
+            if (distributions[i] && distributions[i].length > 0) {
+                session.apStart();
+            } else {
+                console.log(`[AccountManager] No servers assigned to ${accountId.slice(0, 8)}, auto-patrol skipped`);
+            }
         }, i * STAGGER_MS);
     }
 
