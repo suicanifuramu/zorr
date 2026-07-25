@@ -1022,7 +1022,6 @@ class BotSession {
                 if(v+2>bytes.length)return v; const mobVar=view.getUint8(v++); const mobFl=view.getUint8(v++);
                 const mName=this._mobNames[mi]||`Mob_${mi}`;
                 if(this._snakeMobIndices.has(mi)){if(v+1>bytes.length)return v; const sc=view.getUint8(v++); snakeCount=sc; v+=sc*4;}
-                if(v+2>bytes.length)return v; v+=2;
                 this.activeMobs.set(entityId,{entityId,x,y,size,mobName:mName,mobSlug:this._mobSlugs[mi]||mName.toLowerCase().replace(/ /g,'_'),mobIndex:mi,rarityIndex:mri,variant:mobVar,lastUpdated:Date.now()});
                 break;
             }
