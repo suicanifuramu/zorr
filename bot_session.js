@@ -14,8 +14,13 @@ const _CONTROL_BACKOFF_MAX_MS = 30000;
 
 const OPCODE_SEND = {
     HANDSHAKE: 0, PING: 1, SPAWN_PLAY: 2, DIE_QUIT: 3, UNKNOWN_4: 4, MOVEMENT: 5,
-    EQUIP_LOADOUT: 72, TALENT_RESET: 122, TALENT_APPLY: 123, CLAIM_STREAK: 16,
+    EQUIP_LOADOUT: 72, TALENT_RESET: 125, TALENT_APPLY: 126, CLAIM_STREAK: 16,
 };
+// Client setting opcodes from the reference build (S object):
+// S.$o = 121 (showOtherPetals), S.ei = 122 (showOtherPets),
+// S.ai = 125 (talentReset), S.oi = 126 (talentApply).
+const SHOW_OTHER_PETS_OPCODE = 122;
+const SHOW_OTHER_PETALS_OPCODE = 121;
 const BUILD_MAGIC = 1;
 const BUILD_AX = 32;
 const ENTITY_TYPE = { ENTITY:0, PLAYER:1, PETAL:2, MOB:3, DROP:4, ZONE_O:5, ZONE_B:6, ZONE_U:7, UNDERSCORE:8, ZONE_G:9, ZONE_Q:10, WALL:11, ZONE_V:12, LIGHTNING:13, EXPLOSION:14 };
@@ -28,6 +33,11 @@ const AP_LOG_MAX = 50;
 const _talentData = require('./talent_data');
 const talentSlugToId = {};
 for (const t of _talentData) talentSlugToId[t.slug] = t.id;
+
+// Shared UDP discovery socket across all BotSession instances in this process.
+let _sharedDiscoverySocket = null;
+let _sharedDiscoverySubscribers = new Set();
+let _sharedDiscoveryUrl = null;
 
 class LCG {
     constructor(seed) { this.seed = seed >>> 0; }
@@ -294,7 +304,15 @@ class BotSession {
         if (this.pingInterval) clearInterval(this.pingInterval);
         if (this.pollInterval) clearInterval(this.pollInterval);
         if (this._controlStreamReq) { try { this._controlStreamReq.destroy(); } catch(e) {} }
-        if (this._controlDiscoverySocket) { try { this._controlDiscoverySocket.close(); } catch(e) {} }
+        // Unsubscribe from the shared UDP discovery socket; only close it when
+        // no other BotSession in this process is still using it.
+        _sharedDiscoverySubscribers.delete(this);
+        if (_sharedDiscoverySubscribers.size === 0 && _sharedDiscoverySocket) {
+            try { _sharedDiscoverySocket.close(); } catch(e) {}
+            _sharedDiscoverySocket = null;
+            _sharedDiscoveryUrl = null;
+        }
+        this._controlDiscoverySocket = null;
         if (this.ws) { try { this.ws.close(); } catch(e) {} }
     }
 
@@ -427,7 +445,9 @@ class BotSession {
         packet.set(playerIdBytes, y);
         this.ws.send(packet);
         const tag = `[${this.accountId.slice(0,8)}]`;
-        console.log(`${tag} [Handshake] Sent. Size: ${packet.length} bytes`);
+        const headerBytes = packet.slice(0, 9);
+        const headerHex = Array.from(headerBytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+        console.log(`${tag} [Handshake] Sent. Size: ${packet.length} bytes, protocol=${this._protocolVersion}, playerIdLen=${playerIdBytes.length}, header=[${headerHex}]`);
     }
 
     _sendPing() { this._sendEncrypted(new Uint8Array([OPCODE_SEND.PING, 0])); }
@@ -437,6 +457,10 @@ class BotSession {
         packet[0] = OPCODE_SEND.SPAWN_PLAY;
         packet.set(nameBytes, 1);
         this._sendEncrypted(packet);
+    }
+    _sendShowOtherPets(enabled) {
+        // Sending [122, 0] turns off "Show Other Pets".
+        this._sendEncrypted(new Uint8Array([SHOW_OTHER_PETS_OPCODE, enabled ? 1 : 0]));
     }
     _sendDie() { this._sendEncrypted(new Uint8Array([OPCODE_SEND.DIE_QUIT])); }
     _sendClaimStreak() {
@@ -663,25 +687,46 @@ class BotSession {
         this._controlStreamReconnectTimer = setTimeout(() => { this._controlStreamReconnectTimer = null; this._connectControlStream(); }, delay);
     }
     _initControlDiscoveryListener() {
-        const socket = require('dgram').createSocket('udp4');
-        let bound = false;
-        socket.on('error', (e) => {
-            const tag = `[${this.accountId.slice(0,8)}]`;
-            console.log(`${tag} [Bot] UDP socket error: ${e.message}`);
-            this._controlDiscoveryMode = false;
+        if (!_sharedDiscoverySocket) {
+            _sharedDiscoverySocket = require('dgram').createSocket('udp4');
+            _sharedDiscoverySocket.on('error', (e) => {
+                // Only the first BotSession in this process can bind the fixed
+                // discovery port; EADDRINUSE from other sessions is expected and
+                // harmless because they all receive the same discovery broadcast.
+                if (e.code === 'EADDRINUSE') return;
+                const tag = `[${this.accountId.slice(0,8)}]`;
+                console.log(`${tag} [Bot] UDP socket error: ${e.message}`);
+                this._controlDiscoveryMode = false;
+                this._scheduleControlReconnect();
+            });
+            _sharedDiscoverySocket.on('message', (buf) => {
+                try {
+                    const parsed = JSON.parse(buf.toString('utf8'));
+                    if (parsed.type !== 'zorr-control-hello' || typeof parsed.url !== 'string') return;
+                    _sharedDiscoveryUrl = parsed.url;
+                    for (const session of _sharedDiscoverySubscribers) {
+                        try {
+                            session._controlDiscoveryMode = true;
+                            if (session._controlStreamConnected) continue;
+                            if (session._controlStreamReconnectTimer) { clearTimeout(session._controlStreamReconnectTimer); session._controlStreamReconnectTimer = null; }
+                            session._connectControlStream(parsed.url);
+                        } catch (e) {}
+                    }
+                } catch (e) {}
+            });
+            _sharedDiscoverySocket.bind(CONTROL_DISCOVERY_PORT, '127.0.0.1');
+        }
+        // Guard against duplicate subscription if this method is ever called twice.
+        if (!_sharedDiscoverySubscribers.has(this)) {
+            _sharedDiscoverySubscribers.add(this);
+        }
+        this._controlDiscoverySocket = _sharedDiscoverySocket;
+        this._controlDiscoveryMode = true;
+        if (_sharedDiscoveryUrl) {
+            this._connectControlStream(_sharedDiscoveryUrl);
+        } else if (!this._controlStreamConnected && !this._controlStreamReconnectTimer) {
             this._scheduleControlReconnect();
-        });
-        socket.on('message', (buf) => {
-            try {
-                const parsed = JSON.parse(buf.toString('utf8'));
-                if (parsed.type !== 'zorr-control-hello' || typeof parsed.url !== 'string') return;
-                this._controlDiscoveryMode = true;
-                if (this._controlStreamConnected) return;
-                if (this._controlStreamReconnectTimer) { clearTimeout(this._controlStreamReconnectTimer); this._controlStreamReconnectTimer = null; }
-                this._connectControlStream(parsed.url);
-            } catch(e) {}
-        });
-        socket.bind(CONTROL_DISCOVERY_PORT, '127.0.0.1', () => { bound = true; this._controlDiscoverySocket = socket; this._controlDiscoveryMode = true; });
+        }
     }
 
     // ── Handle server messages ──
@@ -769,13 +814,11 @@ class BotSession {
             } catch (err) { console.error(`[${this.accountId.slice(0,8)}] Login parse error: ${err.message}`); }
 
             if (!this.pingInterval) this.pingInterval = setInterval(() => this._sendPing(), 1000);
+            // Turn off "Show Other Pets" on login.
+            this._sendShowOtherPets(false);
+
             if (!this.spawnSent) {
                 setTimeout(() => {
-                    this._sendEncrypted(new Uint8Array([117, 30]));
-                    this._sendEncrypted(new Uint8Array([104, 1]));
-                    this._sendEncrypted(new Uint8Array([105, 1]));
-                    this._sendEncrypted(new Uint8Array([118, 0]));
-                    this._sendEncrypted(new Uint8Array([119, 0]));
                     this._sendSpawn(this.botName);
                     this.spawnSent = true;
                     // Fallback: force _onSpawned if opcode 3 didn't trigger within 3s
@@ -827,6 +870,13 @@ class BotSession {
 
         // Opcode 6: Revive
         if (opcode === 6) { this.isDead = false; this.isSpawned = true; this.returnToTitle = false; this.respawnState = ''; }
+
+        // Log unhandled opcodes to help debug server-side messages (e.g. 0x08)
+        if (![0, 1, 3, 4, 5, 6, 11].includes(opcode)) {
+            const payloadHex = Array.from(bytes).slice(1).map(b => b.toString(16).padStart(2, '0')).join(' ');
+            const payloadAscii = getPrintableAscii(bytes.slice(1));
+            console.log(`[${this.accountId.slice(0,8)}] [Un-handled Opcode] ${opcode} size=${bytes.length} hex=[${payloadHex}] ascii=[${payloadAscii}]`);
+        }
     }
 
     // ── Entity parsing ──

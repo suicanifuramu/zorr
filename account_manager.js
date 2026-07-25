@@ -3,7 +3,6 @@ const path = require('path');
 const http = require('http');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { BotSession } = require('./bot_session');
-const { extractProtocolVersion } = require('./protocol_extractor');
 
 // ── Shared game data (loaded once, shared across all BotSessions) ──
 let gameData = null;
@@ -50,15 +49,10 @@ async function loadGameData() {
         console.log(`[AccountManager] Pinky detection error: ${e.message}`);
     }
 
-    // Protocol version
-    let protocolVersion = 443;
-    try {
-        const { version, jsUrl } = await extractProtocolVersion();
-        protocolVersion = version;
-        console.log(`[AccountManager] Protocol version: ${protocolVersion} (from ${jsUrl})`);
-    } catch (e) {
-        console.log(`[AccountManager] Protocol version fallback: ${protocolVersion}`);
-    }
+    // Protocol version: derive from the same extraction used for game data
+    // to avoid stale/mismatched versions between extractGameData and extractProtocolVersion.
+    const protocolVersion = gameData.protocolVersion ?? 443;
+    console.log(`[AccountManager] Protocol version: ${protocolVersion} (from ${gameData.sourceUrl})`);
 
     console.log(`[AccountManager] Game data loaded: ${petalNames.length} petals, ${mobNames.length} mobs, ${rarities.length} rarities, ${variants.length} variants`);
 
@@ -103,17 +97,24 @@ function distributeAccounts(accounts, proxies) {
 }
 
 // ── Read accounts from file ──
+function isValidUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function readAccounts(filePath) {
     const content = fs.readFileSync(filePath, 'utf8');
     return content.split('\n')
         .map(line => line.trim())
         .filter(line => line && !line.startsWith('#'))
-        .map(line => {
+        .map((line, idx) => {
             const parts = line.split(':');
             const id = parts[0].trim();
             const buildNumber = parts.length >= 2 && /^\d+$/.test(parts[1])
                 ? parseInt(parts[1], 10)
                 : null;
+            if (!isValidUuid(id)) {
+                throw new Error(`accounts.txt line ${idx + 1}: invalid account UUID "${id}"`);
+            }
             return { id, buildNumber };
         });
 }
@@ -202,6 +203,9 @@ async function main() {
     }
 
     // Create and start BotSessions
+    // Stagger initial connections to avoid tripping the server's
+    // concurrent-connection / challenge (opcode 0x08) logic.
+    const STAGGER_MS = 4000;
     const sessions = [];
     for (let i = 0; i < distributed.length; i++) {
         const entry = distributed[i];
@@ -211,8 +215,10 @@ async function main() {
         sessions.push(session);
         const buildTag = entry.buildNumber ? ` (build${entry.buildNumber})` : '';
         const proxyTag = entry.proxy ? ` [proxy: ${entry.proxy.url}]` : '';
-        console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}${proxyTag}`);
-        session.start(distributions[i]);
+        setTimeout(() => {
+            console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}${proxyTag}`);
+            session.start(distributions[i]);
+        }, i * STAGGER_MS);
     }
 
     // Handle graceful shutdown
