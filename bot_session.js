@@ -872,7 +872,7 @@ class BotSession {
         if (opcode === 6) { this.isDead = false; this.isSpawned = true; this.returnToTitle = false; this.respawnState = ''; }
 
         // Log unhandled opcodes to help debug server-side messages (e.g. 0x08)
-        if (![0, 1, 3, 4, 5, 6, 11].includes(opcode)) {
+        if (![0, 1, 3, 4, 5, 6, 11, 111].includes(opcode)) {
             const payloadHex = Array.from(bytes).slice(1).map(b => b.toString(16).padStart(2, '0')).join(' ');
             const payloadAscii = getPrintableAscii(bytes.slice(1));
             console.log(`[${this.accountId.slice(0,8)}] [Un-handled Opcode] ${opcode} size=${bytes.length} hex=[${payloadHex}] ascii=[${payloadAscii}]`);

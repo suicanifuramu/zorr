@@ -4,3 +4,4 @@ zorr-deobfuscated.js
 .extraction_cache.json
 node_modules
 proxies.txt
+AGENTS.MD
