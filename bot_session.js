@@ -13,14 +13,18 @@ const _CONTROL_BACKOFF_INITIAL_MS = 2000;
 const _CONTROL_BACKOFF_MAX_MS = 30000;
 
 const OPCODE_SEND = {
-    HANDSHAKE: 0, PING: 1, SPAWN_PLAY: 2, DIE_QUIT: 3, UNKNOWN_4: 4, MOVEMENT: 5,
-    EQUIP_LOADOUT: 72, TALENT_RESET: 125, TALENT_APPLY: 126, CLAIM_STREAK: 16,
+    // Verified against zorr-deobfuscated.js (and the live obfuscated source's) S object:
+    // S.Qn=0 (HANDSHAKE), S.$n=1 (PING), S.ea=2 (SPAWN_PLAY), S.ta=3 (DIE_QUIT),
+    // S.aa=5 (MOVEMENT), S.pa=16 (CLAIM_STREAK), S.vo=74 (EQUIP_LOADOUT),
+    // S.ai=111 (TALENT_RESET), S.oi=112 (TALENT_APPLY).
+    HANDSHAKE: 0, PING: 1, SPAWN_PLAY: 2, DIE_QUIT: 3, MOVEMENT: 5,
+    EQUIP_LOADOUT: 74, TALENT_RESET: 111, TALENT_APPLY: 112, CLAIM_STREAK: 16,
 };
 // Client setting opcodes from the reference build (S object):
-// S.$o = 121 (showOtherPetals), S.ei = 122 (showOtherPets),
-// S.ai = 125 (talentReset), S.oi = 126 (talentApply).
-const SHOW_OTHER_PETS_OPCODE = 122;
-const SHOW_OTHER_PETALS_OPCODE = 121;
+// S.$o = 107 (showOtherPetals), S.ei = 108 (showOtherPets),
+// S.ai = 111 (talentReset), S.oi = 112 (talentApply).
+const SHOW_OTHER_PETS_OPCODE = 108;
+const SHOW_OTHER_PETALS_OPCODE = 107;
 const BUILD_MAGIC = 1;
 const BUILD_AX = 32;
 const ENTITY_TYPE = { ENTITY:0, PLAYER:1, PETAL:2, MOB:3, DROP:4, ZONE_O:5, ZONE_B:6, ZONE_U:7, UNDERSCORE:8, ZONE_G:9, ZONE_Q:10, WALL:11, ZONE_V:12, LIGHTNING:13, EXPLOSION:14 };
@@ -33,11 +37,6 @@ const AP_LOG_MAX = 50;
 const _talentData = require('./talent_data');
 const talentSlugToId = {};
 for (const t of _talentData) talentSlugToId[t.slug] = t.id;
-
-// Shared UDP discovery socket across all BotSession instances in this process.
-let _sharedDiscoverySocket = null;
-let _sharedDiscoverySubscribers = new Set();
-let _sharedDiscoveryUrl = null;
 
 class LCG {
     constructor(seed) { this.seed = seed >>> 0; }
@@ -260,8 +259,6 @@ class BotSession {
         this._controlStreamReconnectTimer = null;
         this._controlStreamConnected = false;
         this._controlStreamBackoffMs = _CONTROL_BACKOFF_INITIAL_MS;
-        this._controlDiscoveryMode = false;
-        this._controlDiscoverySocket = null;
 
         // Tracking
         this.trackingTargets = [];
@@ -292,7 +289,7 @@ class BotSession {
     }
 
     start(assignedServers) {
-        this._initControlDiscoveryListener();
+        this._connectControlStream();
         this.connect();
         if (assignedServers && assignedServers.length > 0) {
             this._assignedServers = assignedServers;
@@ -304,15 +301,6 @@ class BotSession {
         if (this.pingInterval) clearInterval(this.pingInterval);
         if (this.pollInterval) clearInterval(this.pollInterval);
         if (this._controlStreamReq) { try { this._controlStreamReq.destroy(); } catch(e) {} }
-        // Unsubscribe from the shared UDP discovery socket; only close it when
-        // no other BotSession in this process is still using it.
-        _sharedDiscoverySubscribers.delete(this);
-        if (_sharedDiscoverySubscribers.size === 0 && _sharedDiscoverySocket) {
-            try { _sharedDiscoverySocket.close(); } catch(e) {}
-            _sharedDiscoverySocket = null;
-            _sharedDiscoveryUrl = null;
-        }
-        this._controlDiscoverySocket = null;
         if (this.ws) { try { this.ws.close(); } catch(e) {} }
     }
 
@@ -636,7 +624,7 @@ class BotSession {
     // ── SSE Control Stream ──
     _connectControlStream(serverUrl) {
         if (this._controlStreamReq) { try { this._controlStreamReq.destroy(); } catch(e) {} }
-        if (this._controlStreamReconnectTimer && !this._controlDiscoveryMode) { clearTimeout(this._controlStreamReconnectTimer); this._controlStreamReconnectTimer = null; }
+        if (this._controlStreamReconnectTimer) { clearTimeout(this._controlStreamReconnectTimer); this._controlStreamReconnectTimer = null; }
         const baseUrl = serverUrl || MAP_SERVER_URL;
         const url = new URL('/control-stream', baseUrl);
         url.searchParams.set('accountId', this.accountId);
@@ -680,52 +668,18 @@ class BotSession {
 
     _onStreamClosed() { this._controlStreamConnected = false; this._scheduleControlReconnect(); }
     _scheduleControlReconnect() {
-        if (this._controlDiscoveryMode && this._controlStreamConnected) return;
+        if (this._controlStreamConnected) return;
         if (this._controlStreamReconnectTimer) return;
         const delay = this._controlStreamBackoffMs;
         this._controlStreamBackoffMs = Math.min(this._controlStreamBackoffMs * 2, _CONTROL_BACKOFF_MAX_MS);
         this._controlStreamReconnectTimer = setTimeout(() => { this._controlStreamReconnectTimer = null; this._connectControlStream(); }, delay);
     }
     _initControlDiscoveryListener() {
-        if (!_sharedDiscoverySocket) {
-            _sharedDiscoverySocket = require('dgram').createSocket('udp4');
-            _sharedDiscoverySocket.on('error', (e) => {
-                // Only the first BotSession in this process can bind the fixed
-                // discovery port; EADDRINUSE from other sessions is expected and
-                // harmless because they all receive the same discovery broadcast.
-                if (e.code === 'EADDRINUSE') return;
-                const tag = `[${this.accountId.slice(0,8)}]`;
-                console.log(`${tag} [Bot] UDP socket error: ${e.message}`);
-                this._controlDiscoveryMode = false;
-                this._scheduleControlReconnect();
-            });
-            _sharedDiscoverySocket.on('message', (buf) => {
-                try {
-                    const parsed = JSON.parse(buf.toString('utf8'));
-                    if (parsed.type !== 'zorr-control-hello' || typeof parsed.url !== 'string') return;
-                    _sharedDiscoveryUrl = parsed.url;
-                    for (const session of _sharedDiscoverySubscribers) {
-                        try {
-                            session._controlDiscoveryMode = true;
-                            if (session._controlStreamConnected) continue;
-                            if (session._controlStreamReconnectTimer) { clearTimeout(session._controlStreamReconnectTimer); session._controlStreamReconnectTimer = null; }
-                            session._connectControlStream(parsed.url);
-                        } catch (e) {}
-                    }
-                } catch (e) {}
-            });
-            _sharedDiscoverySocket.bind(CONTROL_DISCOVERY_PORT, '127.0.0.1');
-        }
-        // Guard against duplicate subscription if this method is ever called twice.
-        if (!_sharedDiscoverySubscribers.has(this)) {
-            _sharedDiscoverySubscribers.add(this);
-        }
-        this._controlDiscoverySocket = _sharedDiscoverySocket;
-        this._controlDiscoveryMode = true;
-        if (_sharedDiscoveryUrl) {
-            this._connectControlStream(_sharedDiscoveryUrl);
-        } else if (!this._controlStreamConnected && !this._controlStreamReconnectTimer) {
-            this._scheduleControlReconnect();
+        // Connect directly to the map server control stream. The previous UDP
+        // discovery could only bind one socket per process, which broke when
+        // multiple accounts ran in the same account_manager process.
+        if (!this._controlStreamConnected && !this._controlStreamReconnectTimer) {
+            this._connectControlStream();
         }
     }
 
@@ -1020,6 +974,13 @@ class BotSession {
                 if(v+2>bytes.length)return v; const mv=view.getUint16(v); v+=2;
                 const [mi,mri]=decodeItemValue(mv);
                 if(v+2>bytes.length)return v; const mobVar=view.getUint8(v++); const mobFl=view.getUint8(v++);
+                // Defensive: skip mobs with invalid indices to avoid polluting the
+                // map with mis-parsed/out-of-sync entities (e.g. Mob_1789).
+                if (mi < 0 || mi >= (this._mobNames?.length || 0)) {
+                    const tag = `[${this.accountId.slice(0,8)}]`;
+                    console.log(`${tag} [Mob] Skipping invalid mob index ${mi} (raw=${mv}) entityId=${entityId}`);
+                    break;
+                }
                 const mName=this._mobNames[mi]||`Mob_${mi}`;
                 if(this._snakeMobIndices.has(mi)){if(v+1>bytes.length)return v; const sc=view.getUint8(v++); snakeCount=sc; v+=sc*4;}
                 this.activeMobs.set(entityId,{entityId,x,y,size,mobName:mName,mobSlug:this._mobSlugs[mi]||mName.toLowerCase().replace(/ /g,'_'),mobIndex:mi,rarityIndex:mri,variant:mobVar,lastUpdated:Date.now()});
