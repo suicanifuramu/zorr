@@ -506,6 +506,65 @@
         9
       ],
       "roleId": "1523867738588712970"
+    },
+    {
+      "slug": "shipwreck",
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ],
+      "roleId": "1527621665163317393"
+    },
+    {
+      "slug": "shell",
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ],
+      "roleId": "1527621665163317393"
+    },
+    {
+      "slug": "shipwreck",
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8
+      ],
+      "roleId": "1527621684138479616"
+    },
+    {
+      "slug": "yeba",
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ],
+      "roleId": "1527621684138479616"
+    },
+    {
+      "slug": "bush",
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ],
+      "roleId": "1527621684138479616"
     }
   ]
 }

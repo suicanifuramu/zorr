@@ -5,8 +5,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -36,8 +35,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -46,13 +44,9 @@
     },
     {
       "slug": "ladybug",
-      "enabled": true,
-      "variants": [
-        1,
-        2
-      ],
+      "enabled": false,
+      "variants": [],
       "rarities": [
-        8,
         9
       ]
     },
@@ -70,14 +64,9 @@
     },
     {
       "slug": "spider_cave",
-      "enabled": true,
-      "variants": [
-        11
-      ],
-      "rarities": [
-        8,
-        9
-      ]
+      "enabled": false,
+      "variants": [],
+      "rarities": []
     },
     {
       "slug": "spider_yoba",
@@ -211,17 +200,22 @@
     },
     {
       "slug": "desert_centipede",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "fire_ant_hole",
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -435,8 +429,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -750,9 +743,15 @@
     },
     {
       "slug": "hel_bee",
-      "enabled": false,
-      "variants": [],
-      "rarities": []
+      "enabled": true,
+      "variants": [
+        1,
+        2
+      ],
+      "rarities": [
+        8,
+        9
+      ]
     },
     {
       "slug": "hel_beetle",
@@ -872,8 +871,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -882,15 +880,9 @@
     },
     {
       "slug": "firestorm",
-      "enabled": true,
-      "variants": [
-        1,
-        2
-      ],
-      "rarities": [
-        8,
-        9
-      ]
+      "enabled": false,
+      "variants": [],
+      "rarities": []
     },
     {
       "slug": "hel_beekeeper",
@@ -916,8 +908,7 @@
         3,
         4,
         5,
-        6,
-        11
+        6
       ],
       "rarities": [
         8,
@@ -1157,8 +1148,24 @@
       "slug": "cancer",
       "enabled": true,
       "variants": [
+        0,
         1,
-        2
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
       ],
       "rarities": [
         8,
@@ -1167,7 +1174,7 @@
     },
     {
       "slug": "red_blood_cell",
-      "enabled": false,
+      "enabled": true,
       "variants": [
         1,
         2
@@ -1252,8 +1259,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -1322,6 +1328,7 @@
         13,
         14,
         15,
+        16,
         17
       ],
       "rarities": [
@@ -1528,8 +1535,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        14
+        2
       ],
       "rarities": [
         8,
@@ -1541,8 +1547,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -1624,8 +1629,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -1667,8 +1671,7 @@
       "enabled": true,
       "variants": [
         1,
-        2,
-        11
+        2
       ],
       "rarities": [
         8,
@@ -1737,6 +1740,7 @@
         13,
         14,
         15,
+        16,
         17
       ],
       "rarities": [
@@ -1847,6 +1851,13 @@
         17
       ],
       "rarities": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
         7,
         8,
         9
@@ -1912,6 +1923,12 @@
         17
       ],
       "rarities": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
         6,
         7,
         8,
@@ -1948,6 +1965,35 @@
     },
     {
       "slug": "square",
+      "enabled": true,
+      "variants": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "rarities": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "slug": "totem",
       "enabled": true,
       "variants": [
         0,
