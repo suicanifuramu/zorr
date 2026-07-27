@@ -284,7 +284,9 @@ const server = http.createServer((req, res) => {
         const existing = botSessions.get(accountId);
         if (existing) { try { existing.client.end(); } catch(e) {} }
 
-        const sessionData = { client: res, latestData: { map: null, position: null, mobs: null, config: null, 'daily-streak': null, 'auto-patrol': null } };
+        // Preserve existing latestData across reconnections (don't null out data accumulated from /mapdata POSTs)
+        const existingLatest = existing?.latestData || {};
+        const sessionData = { client: res, latestData: { map: existingLatest.map || null, position: existingLatest.position || null, mobs: existingLatest.mobs || null, config: existingLatest.config || null, 'daily-streak': existingLatest['daily-streak'] || null, 'auto-patrol': existingLatest['auto-patrol'] || null } };
         botSessions.set(accountId, sessionData);
 
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });

@@ -13,16 +13,15 @@ const _CONTROL_BACKOFF_INITIAL_MS = 2000;
 const _CONTROL_BACKOFF_MAX_MS = 30000;
 
 const OPCODE_SEND = {
-    // Verified against zorr-deobfuscated.js (and the live obfuscated source's) S object:
-    // S.Qn=0 (HANDSHAKE), S.$n=1 (PING), S.ea=2 (SPAWN_PLAY), S.ta=3 (DIE_QUIT),
-    // S.aa=5 (MOVEMENT), S.pa=16 (CLAIM_STREAK), S.vo=74 (EQUIP_LOADOUT),
-    // S.ai=111 (TALENT_RESET), S.oi=112 (TALENT_APPLY).
+    // Verified against current game's S object (zorr-deobfuscated.js line 1190-1327):
+    // Mapping uses N() auto-increment: Qn=0, $n=1, ea=2, ta=3, na=4, aa=5, ...
+    // vo=74 (EQUIP_LOADOUT), oi=112 (TALENT_SPEND), ki=128 (TALENT_APPLY)
     HANDSHAKE: 0, PING: 1, SPAWN_PLAY: 2, DIE_QUIT: 3, MOVEMENT: 5,
-    EQUIP_LOADOUT: 74, TALENT_RESET: 111, TALENT_APPLY: 112, CLAIM_STREAK: 16,
+    EQUIP_LOADOUT: 74, TALENT_RESET: 112, TALENT_APPLY: 128, CLAIM_STREAK: 16,
 };
-// Client setting opcodes from the reference build (S object):
-// S.$o = 107 (showOtherPetals), S.ei = 108 (showOtherPets),
-// S.ai = 111 (talentReset), S.oi = 112 (talentApply).
+// Client setting opcodes from the reference build (S object, N() auto-increment at line 1190-1327):
+// S.$o = 107 (guildSquad), S.ei = 108 (showPositionToGuild),
+// S.oi = 112 (talentSpend), S.ki = 128 (talentApply).
 const SHOW_OTHER_PETS_OPCODE = 108;
 const SHOW_OTHER_PETALS_OPCODE = 107;
 const BUILD_MAGIC = 1;
@@ -192,6 +191,7 @@ class BotSession {
         this.botEquippedTalents = [];
         this.botInventory = {};
         this.isSpawned = false;
+        this.isPinky = false;
         this.isDead = false;
         this.respawnState = '';
         this.returnToTitle = false;
@@ -354,6 +354,9 @@ class BotSession {
         this.pingInterval = null; this.movementInterval = null; this.pollInterval = null;
         this.isSpawned = false; this.loggedIn = false; this.spawnSent = false;
         this.isDead = false; this.respawnState = '';
+        this.isPinky = false; this.botOutlierCount = 0;
+        if (this._pendingEquipRetryTimer) { clearTimeout(this._pendingEquipRetryTimer); this._pendingEquipRetryTimer = null; }
+        this._pendingEquipCmd = null;
         this.receivedOpcodes = new Set();
         this.botId = null; this.botX = 0; this.botY = 0; this.botStats = null;
         this.activePetals.clear(); this.activeMobs.clear(); this.knownEntities.clear();
@@ -466,12 +469,12 @@ class BotSession {
         this._sendEncrypted(new Uint8Array([OPCODE_SEND.MOVEMENT, xByte, yByte, actionFlags, 127]));
     }
 
-    _sendTalentReset() { if (this.isSpawned) this._sendEncrypted(new Uint8Array([OPCODE_SEND.TALENT_RESET])); }
-    _sendTalentApply(talentId) { if (this.isSpawned) this._sendEncrypted(new Uint8Array([OPCODE_SEND.TALENT_APPLY, talentId])); }
+    _sendTalentApply(talentId) { if (this.isSpawned) this._sendEncrypted(new Uint8Array([OPCODE_SEND.TALENT_RESET, talentId & 0xFF, (talentId >> 8) & 0xFF])); } // S.oi = 112 spend
+    _sendTalentCommit() { if (this.isSpawned) this._sendEncrypted(new Uint8Array([OPCODE_SEND.TALENT_APPLY])); } // S.ki = 128 apply
     _sendTalents(talentSlugs) {
         if (!Array.isArray(talentSlugs) || talentSlugs.length === 0) return;
-        this._sendTalentReset();
         for (const slug of talentSlugs) { const id = talentSlugToId[slug]; if (id !== undefined) this._sendTalentApply(id); }
+        this._sendTalentCommit();
         this.botEquippedTalents = talentSlugs;
     }
     _sendEquipLoadout(buildObj) {
@@ -826,7 +829,7 @@ class BotSession {
         if (opcode === 6) { this.isDead = false; this.isSpawned = true; this.returnToTitle = false; this.respawnState = ''; }
 
         // Log unhandled opcodes to help debug server-side messages (e.g. 0x08)
-        if (![0, 1, 3, 4, 5, 6, 11, 111].includes(opcode)) {
+        if (![0, 1, 3, 4, 5, 6, 11, 50, 111].includes(opcode)) {
             const payloadHex = Array.from(bytes).slice(1).map(b => b.toString(16).padStart(2, '0')).join(' ');
             const payloadAscii = getPrintableAscii(bytes.slice(1));
             console.log(`[${this.accountId.slice(0,8)}] [Un-handled Opcode] ${opcode} size=${bytes.length} hex=[${payloadHex}] ascii=[${payloadAscii}]`);
@@ -922,7 +925,7 @@ class BotSession {
             }
         }
         if (flags & UPDATE_FLAGS.LEVEL) { if (v+2>bytes.length) return v; const lv = view.getUint16(v); v+=2; if (entityId===this.botId && this.botStats) this.botStats.level=lv; }
-        if (flags & UPDATE_FLAGS.FACE) { if (v+2>bytes.length) return v; v+=2; }
+        if (flags & UPDATE_FLAGS.FACE) { if (v+3>bytes.length) return v; v+=3; } // y(a): face + mobSkin + aura
         if (flags & UPDATE_FLAGS.VG) { if (v+1>bytes.length) return v; v+=1; }
         if (flags & UPDATE_FLAGS.GUILD) { if (v+1>bytes.length) return v; const r=readString(view,v); v=r.newOffset; }
         if (flags & UPDATE_FLAGS.MANA) { if (v+1>bytes.length) return v; const mn=view.getUint8(v++)/255; if (entityId===this.botId && this.botStats) this.botStats.manaPercent=(mn*100).toFixed(1); }
@@ -953,9 +956,9 @@ class BotSession {
                 const gu=readString(view,v); v=gu.newOffset;
                 if(v+4>bytes.length)return v; const sf=view.getUint32(v); v+=4;
                 if(v+2>bytes.length)return v; const lv=view.getUint16(v); v+=2;
-                if(v+2>bytes.length)return v; v+=2;
-                if(v+3>bytes.length)return v; v+=3;
-                if(v+2>bytes.length)return v; const hp=view.getUint8(v++)/255; const mn=view.getUint8(v++)/255;
+                if(v+3>bytes.length)return v; v+=3; // y(a): face + mobSkin + aura (3 bytes)
+                if(v+3>bytes.length)return v; v+=3; // a.Ip + a.sp + a.Un (3 bytes)
+                if(v+2>bytes.length)return v; const hp=view.getUint8(v++)/255; const mn=view.getUint8(v++)/255; // i(a)
                 if(entityId===this.botId){
                     this.botStats={entityId,rarity:layer,x,y,size,angle,username:un.value,nickname:nn.value,guild:gu.value,statusFlags:sf,level:lv,hpPercent:(hp*100).toFixed(1),manaPercent:(mn*100).toFixed(1)};
                     this.botX=x; this.botY=y; this._recomputePathIfNavigating();
@@ -979,10 +982,12 @@ class BotSession {
                 if (mi < 0 || mi >= (this._mobNames?.length || 0)) {
                     const tag = `[${this.accountId.slice(0,8)}]`;
                     console.log(`${tag} [Mob] Skipping invalid mob index ${mi} (raw=${mv}) entityId=${entityId}`);
+                    v += 2; // skip HP/mana bytes (i(a)) to maintain alignment
                     break;
                 }
                 const mName=this._mobNames[mi]||`Mob_${mi}`;
                 if(this._snakeMobIndices.has(mi)){if(v+1>bytes.length)return v; const sc=view.getUint8(v++); snakeCount=sc; v+=sc*4;}
+                v += 2; // HP/mana bytes (matching reference i(a))
                 this.activeMobs.set(entityId,{entityId,x,y,size,mobName:mName,mobSlug:this._mobSlugs[mi]||mName.toLowerCase().replace(/ /g,'_'),mobIndex:mi,rarityIndex:mri,variant:mobVar,lastUpdated:Date.now()});
                 break;
             }
