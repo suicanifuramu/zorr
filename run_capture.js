@@ -3,20 +3,6 @@
 // full account_manager. Usage: node run_capture.js <accountId>
 require('dotenv').config();
 
-// Stub the native `canvas` module (not compiled in this env; only used for the
-// Discord map image, which capture does not trigger).
-const Module = require('module');
-const _origLoad = Module._load;
-Module._load = function (request, parent, isMain) {
-    if (request === 'canvas') {
-        return {
-            createCanvas: () => ({ getContext: () => ({}), toBuffer: () => Buffer.alloc(0) }),
-            registerFont: () => {},
-        };
-    }
-    return _origLoad.apply(this, arguments);
-};
-
 const { BotSession } = require('./bot_session');
 const { extractGameData } = require('./game_data_extractor');
 const { extractProtocolVersion } = require('./protocol_extractor');
