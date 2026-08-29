@@ -1,7 +1,11 @@
 // test_discord.js — Discord通知の動作確認スクリプト
-const https = require("https");
-const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+import https from "node:https";
+import path from "node:path";
+import dotenv from "dotenv";
+import { fileURLToPath } from "node:url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const token = process.env.DISCORD_BOT_TOKEN;
 const channelId = process.argv[2]; // コマンドライン引数から取得

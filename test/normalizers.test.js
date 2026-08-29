@@ -1,7 +1,7 @@
 "use strict";
-const { test } = require("node:test");
-const assert = require("node:assert");
-const {
+import { test } from "node:test";
+import assert from "node:assert";
+import {
     slugify,
     normalizeRarities,
     normalizeVariants,
@@ -10,8 +10,8 @@ const {
     normalizeTalents,
     normalizeBiomeMobs,
     computeSnakeIndices,
-} = require("../normalizers");
-const {
+} from "../normalizers.js";
+import {
     isVariantMap,
     isRarityTupleArray,
     isPetalArray,
@@ -20,9 +20,9 @@ const {
     detectSnakeProp,
     classify,
     SNAKE_PROP_NAMES,
-} = require("../shape_classifier");
-const { SNAKE_SLUG_PATTERNS, isSnakeSlug } = require("../game_data_extractor");
-const { extractSnakeIndicesFromRaw } = require("../extraction_pipeline");
+} from "../shape_classifier.js";
+import { SNAKE_SLUG_PATTERNS, isSnakeSlug } from "../game_data_extractor.js";
+import { extractSnakeIndicesFromRaw } from "../extraction_pipeline.js";
 
 test("slugify lowercases and underscores", () => {
     assert.strictEqual(slugify("Hel Beetle"), "hel_beetle");

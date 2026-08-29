@@ -1,22 +1,17 @@
-const prettierConfig = require("eslint-config-prettier");
+import prettierConfig from "eslint-config-prettier";
 
-module.exports = [
+export default [
     {
         ignores: ["node_modules/", "zorr-deobfuscator/", "pathfinding/map.json", "pathfinding/*.min.js"],
     },
     {
         languageOptions: {
             ecmaVersion: 2024,
-            sourceType: "commonjs",
+            sourceType: "module",
             globals: {
-                require: "readonly",
-                module: "writable",
-                exports: "writable",
                 process: "readonly",
                 console: "readonly",
                 Buffer: "readonly",
-                __dirname: "readonly",
-                __filename: "readonly",
                 setTimeout: "readonly",
                 setInterval: "readonly",
                 clearTimeout: "readonly",
@@ -28,6 +23,7 @@ module.exports = [
                 URLSearchParams: "readonly",
                 fetch: "readonly",
                 WebSocket: "readonly",
+                import: "readonly",
             },
         },
         linterOptions: {
@@ -41,12 +37,6 @@ module.exports = [
             "no-cond-assign": "error",
             "prefer-const": "warn",
             eqeqeq: ["warn", "smart"],
-        },
-    },
-    {
-        files: ["test/**/*.js"],
-        languageOptions: {
-            globals: { describe: "readonly", it: "readonly" },
         },
     },
     prettierConfig,

@@ -10,8 +10,8 @@
  * `parentPort.postMessage({ id, ... })` and receives the result via
  * `parentPort.on('message')` (matched by `id`).
  */
-const { parentPort } = require("worker_threads");
-const { createZorrSandbox } = require("./sandbox_factory");
+import { parentPort } from "node:worker_threads";
+import { createZorrSandbox } from "./sandbox_factory.js";
 
 if (!parentPort) {
     throw new Error("vm_worker.js must be run as a worker thread");

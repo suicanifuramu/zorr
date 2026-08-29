@@ -13,7 +13,7 @@
  * This works for local-scope variables because the getter is a closure
  * defined in the same scope as X.
  */
-const acorn = require("acorn");
+import * as acorn from "acorn";
 
 /**
  * Walk the AST and collect candidate variable declarations. A candidate is
@@ -259,4 +259,7 @@ function injectCaptures(source, candidates) {
     return parts.join("");
 }
 
-module.exports = { findCandidates, findFunctionBody, injectCaptures, captureCode };
+export { findCandidates };
+export { findFunctionBody };
+export { injectCaptures };
+export { captureCode };

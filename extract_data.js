@@ -1,4 +1,4 @@
-const { getOrComputeExtraction } = require("./extraction_pipeline");
+import { getOrComputeExtraction } from "./extraction_pipeline.js";
 
 (async () => {
     console.log("[extract_data] Fetching + VM execution...");

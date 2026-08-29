@@ -1,13 +1,16 @@
-const http = require("http");
-const https = require("https");
-const fs = require("fs");
-const path = require("path");
-const dgram = require("dgram");
-const { getOrComputeExtraction, invalidateCache } = require("./extraction_pipeline");
+import http from "node:http";
+import https from "node:https";
+import fs from "node:fs";
+import path from "node:path";
+import dgram from "node:dgram";
+import { getOrComputeExtraction, invalidateCache } from "./extraction_pipeline.js";
+import dotenv from "dotenv";
+import { fileURLToPath } from "node:url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load .env for DISCORD_WEBHOOK_URL
 try {
-    require("dotenv").config({ path: path.join(__dirname, ".env") });
+    dotenv.config({ path: path.join(__dirname, ".env") });
 } catch (e) {
     /* dotenv not available, ignore */
 }

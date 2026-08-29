@@ -13,8 +13,10 @@
  * The worker is created lazily on first call and is unref'd so it
  * doesn't keep the process alive.
  */
-const path = require("path");
-const { Worker } = require("worker_threads");
+import path from "node:path";
+import { Worker } from "node:worker_threads";
+import { fileURLToPath } from "node:url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let _worker = null;
 let _nextId = 1;
@@ -65,4 +67,5 @@ function shutdown() {
     return w.terminate();
 }
 
-module.exports = { runInWorker, shutdown };
+export { runInWorker };
+export { shutdown };

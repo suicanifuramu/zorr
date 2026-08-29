@@ -134,13 +134,11 @@ function classify(value) {
     return null;
 }
 
-module.exports = {
-    classify,
-    isVariantMap,
-    isRarityTupleArray,
-    isPetalArray,
-    isMobArray,
-    isBiomeMobMap,
-    detectSnakeProp,
-    SNAKE_PROP_NAMES,
-};
+export { classify };
+export { isVariantMap };
+export { isRarityTupleArray };
+export { isPetalArray };
+export { isMobArray };
+export { isBiomeMobMap };
+export { detectSnakeProp };
+export { SNAKE_PROP_NAMES };

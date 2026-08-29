@@ -8,7 +8,7 @@
  *             extraction_pipeline.js. This wrapper remains for backward
  *             compatibility with bot_session.js callers.
  */
-const { getOrComputeExtraction } = require("./extraction_pipeline");
+import { getOrComputeExtraction } from "./extraction_pipeline.js";
 
 /**
  * @param {Object} [options]  passed through to the pipeline
@@ -19,4 +19,4 @@ async function extractProtocolVersion(options = {}) {
     return { version: full.protocolVersion, jsUrl: full.jsUrl };
 }
 
-module.exports = { extractProtocolVersion };
+export { extractProtocolVersion };

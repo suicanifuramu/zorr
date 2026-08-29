@@ -1,5 +1,5 @@
-const fs = require("fs");
-const { PNG } = require("pngjs");
+import fs from "node:fs";
+import { PNG } from "pngjs";
 
 fs.createReadStream("map.png")
     .pipe(new PNG())

@@ -18,10 +18,11 @@
  * public game data), but we keep the file under gitignore-equivalent
  * handling and write atomically via temp + rename.
  */
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
 
-const CACHE_DIR = __dirname;
+import { fileURLToPath } from "node:url";
+const CACHE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CACHE_PATH = path.join(CACHE_DIR, ".extraction_cache.json");
 const CACHE_TMP = CACHE_PATH + ".tmp";
 
@@ -123,11 +124,9 @@ function cachePath() {
     return CACHE_PATH;
 }
 
-module.exports = {
-    loadCache,
-    saveCache,
-    clearCache,
-    cacheExists,
-    cachePath,
-    SCHEMA_VERSION,
-};
+export { loadCache };
+export { saveCache };
+export { clearCache };
+export { cacheExists };
+export { cachePath };
+export { SCHEMA_VERSION };

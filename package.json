@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "Zorr game bot - WebSocket client, map server, and extraction pipeline",
     "main": "map_server.js",
+    "type": "module",
     "scripts": {
         "start": "node map_server.js",
         "pathfind": "node pathfinding/server.js",

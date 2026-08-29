@@ -1,4 +1,4 @@
-module.exports = [
+export default [
     { id: 0, slug: "Health1", cost: 4, value: 8, parentId: -1 },
     { id: 1, slug: "Health2", cost: 12, value: 16, parentId: 0 },
     { id: 2, slug: "Health3", cost: 24, value: 24, parentId: 1 },

@@ -1,9 +1,14 @@
-const fs = require("fs");
-const path = require("path");
-const http = require("http");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
-const { BotSession } = require("./bot_session");
-const { invalidateCache } = require("./extraction_pipeline");
+import fs from "node:fs";
+import path from "node:path";
+import http from "node:http";
+import dotenv from "dotenv";
+import { fileURLToPath } from "node:url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+dotenv.config({ path: path.join(__dirname, ".env") });
+import { BotSession } from "./bot_session.js";
+import { invalidateCache } from "./extraction_pipeline.js";
+import { extractGameData } from "./game_data_extractor.js";
 
 // ── Shared game data (loaded once, shared across all BotSessions) ──
 let gameData = null;
@@ -12,7 +17,6 @@ async function loadGameData() {
     console.log("[AccountManager] Loading shared game data...");
     // Always fetch fresh game data so the protocol version matches the live server.
     invalidateCache();
-    const { extractGameData } = require("./game_data_extractor");
     gameData = await extractGameData({ includeSource: true });
     if (gameData.schemaVersion !== 2) {
         throw new Error(`Unsupported schema version ${gameData.schemaVersion}`);

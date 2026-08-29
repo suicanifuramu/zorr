@@ -5,7 +5,7 @@
  * with no VM/fetch/cache concerns — extracted here to avoid a circular
  * dependency between extraction_pipeline and game_data_extractor.
  */
-const { detectSnakeProp } = require("./shape_classifier");
+import { detectSnakeProp } from "./shape_classifier.js";
 
 function slugify(name) {
     if (typeof name !== "string") return "";
@@ -375,14 +375,12 @@ function _findEnclosingFunctionName(root, target) {
     return null;
 }
 
-module.exports = {
-    slugify,
-    normalizeRarities,
-    normalizeVariants,
-    normalizePetals,
-    normalizeMobs,
-    computeSnakeIndices,
-    normalizeTalents,
-    normalizeBiomeMobs,
-    normalizeServerList,
-};
+export { slugify };
+export { normalizeRarities };
+export { normalizeVariants };
+export { normalizePetals };
+export { normalizeMobs };
+export { computeSnakeIndices };
+export { normalizeTalents };
+export { normalizeBiomeMobs };
+export { normalizeServerList };

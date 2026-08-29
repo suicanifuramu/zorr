@@ -13,7 +13,7 @@
  *     responses are surfaced as {notModified: true} so the caller can
  *     reuse the previous result without a body transfer.
  */
-const https = require("https");
+import https from "node:https";
 
 function httpGet(url, { headers = {} } = {}) {
     return new Promise((resolve, reject) => {
@@ -157,11 +157,7 @@ async function fetchObfuscatedSource() {
     return { source, jsUrl, htmlUrl };
 }
 
-module.exports = {
-    fetchObfuscatedSource,
-    fetchJsUrlFromHtml,
-    httpGet,
-    httpGetWithMeta,
-    _resetHtmlMeta,
-    getHtmlMeta: () => ({ etag: _htmlEtag, lastModified: _htmlLastModified }),
-};
+export { fetchObfuscatedSource, fetchJsUrlFromHtml, httpGet, httpGetWithMeta, _resetHtmlMeta };
+export function getHtmlMeta() {
+    return { etag: _htmlEtag, lastModified: _htmlLastModified };
+}

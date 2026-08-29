@@ -16,12 +16,12 @@
  * mock WebSocket's onopen fires, with a configurable hard cap so
  * callers that don't need the protocol version can skip it.
  */
-const vm = require("vm");
-const { fetchObfuscatedSource, fetchJsUrlFromHtml } = require("./source_fetcher");
-const { findCandidates, findFunctionBody, injectCaptures } = require("./ast_capture");
-const { createZorrSandbox } = require("./sandbox_factory");
-const { classify } = require("./shape_classifier");
-const {
+import vm from "node:vm";
+import { fetchObfuscatedSource, fetchJsUrlFromHtml } from "./source_fetcher.js";
+import { findCandidates, findFunctionBody, injectCaptures } from "./ast_capture.js";
+import { createZorrSandbox } from "./sandbox_factory.js";
+import { classify } from "./shape_classifier.js";
+import {
     normalizeRarities,
     normalizeVariants,
     normalizePetals,
@@ -30,12 +30,13 @@ const {
     normalizeBiomeMobs,
     normalizeServerList,
     computeSnakeIndices,
-} = require("./normalizers");
-const _talentData = require("./talent_data");
-const cacheStore = require("./cache_store");
+} from "./normalizers.js";
+import _talentData from "./talent_data.js";
+import * as cacheStore from "./cache_store.js";
 // P10: Worker-thread support (opt-in via ZORR_USE_VM_WORKER=1)
+import * as _workerClientMod from "./vm_worker_client.js";
 const _useWorker = process.env.ZORR_USE_VM_WORKER === "1";
-const _workerClient = _useWorker ? require("./vm_worker_client") : null;
+const _workerClient = _useWorker ? _workerClientMod : null;
 
 // ============================================================================
 // Cache + in-flight coalescing
@@ -160,7 +161,7 @@ function _parseRootAst(source) {
 // In both cases the resulting value is a string array of length >= 5
 // (anything shorter is unlikely to be a biome list).
 // ============================================================================
-const acorn = require("acorn");
+import * as acorn from "acorn";
 
 function _buildTxResolver(source) {
     const resolver = new Map();
@@ -1088,15 +1089,13 @@ async function getOrComputeExtraction(options = {}) {
     return _inflight.then(project);
 }
 
-module.exports = {
-    runFullExtraction,
-    getOrComputeExtraction,
-    invalidateCache,
-    getCacheStatus,
-    extractSnakeIndicesFromRaw,
-    URL_CHECK_INTERVAL_MS,
-    _buildTxResolver,
-    _parseRootAst,
-    _resolveDynamicResolver,
-    _scanSourceForVersion,
-};
+export { runFullExtraction };
+export { getOrComputeExtraction };
+export { invalidateCache };
+export { getCacheStatus };
+export { extractSnakeIndicesFromRaw };
+export { URL_CHECK_INTERVAL_MS };
+export { _buildTxResolver };
+export { _parseRootAst };
+export { _resolveDynamicResolver };
+export { _scanSourceForVersion };

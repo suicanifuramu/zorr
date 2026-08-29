@@ -1,11 +1,15 @@
-const WebSocket = require("ws");
-const { PNG } = require("pngjs");
-const opentype = require("opentype.js");
-const path = require("path");
-const http = require("http");
-const https = require("https");
-const crypto = require("crypto");
-const fs = require("fs");
+import WebSocket from "ws";
+import { PNG } from "pngjs";
+import opentype from "opentype.js";
+import path from "node:path";
+import http from "node:http";
+import https from "node:https";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import { SocksProxyAgent } from "socks-proxy-agent";
+import { HttpsProxyAgent } from "https-proxy-agent";
+import { fileURLToPath } from "node:url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const MAP_SERVER_URL = "http://localhost:3000";
 
@@ -82,7 +86,7 @@ function _drawText57(buf, W, text, cx, cy, rgb) {
 // Uses Arial Bold from Windows fonts; falls back gracefully if unavailable.
 let _ttfFont = null;
 try {
-    const _buf = require("fs").readFileSync("C:/Windows/Fonts/arialbd.ttf");
+    const _buf = fs.readFileSync("C:/Windows/Fonts/arialbd.ttf");
     _ttfFont = opentype.parse(_buf.buffer.slice(_buf.byteOffset, _buf.byteOffset + _buf.byteLength));
 } catch (e) {
     /* ponytail: windows-only path; bundle a TTF if this must run elsewhere */
@@ -242,7 +246,7 @@ const _FRANTIC_DIRS = [
 const _FRANTIC_MAX_MS = 8000;
 const AP_LOG_MAX = 50;
 
-const _talentData = require("./talent_data");
+import _talentData from "./talent_data.js";
 const talentSlugToId = {};
 for (const t of _talentData) talentSlugToId[t.slug] = t.id;
 
@@ -404,10 +408,8 @@ class BotSession {
         if (proxyUrl) {
             try {
                 if (proxyUrl.startsWith("socks")) {
-                    const { SocksProxyAgent } = require("socks-proxy-agent");
                     this.proxyAgent = new SocksProxyAgent(proxyUrl);
                 } else if (proxyUrl.startsWith("http")) {
-                    const { HttpsProxyAgent } = require("https-proxy-agent");
                     this.proxyAgent = new HttpsProxyAgent(proxyUrl);
                 }
             } catch (e) {
@@ -2830,15 +2832,13 @@ class BotSession {
     }
 }
 
-module.exports = {
-    BotSession,
-    buildDistanceMap,
-    decodeBuildCode,
-    decodeItemValue,
-    LCG,
-    MinHeap,
-    decompressCoord,
-    readString,
-    decodeStatusFlags,
-    getPrintableAscii,
-};
+export { BotSession };
+export { buildDistanceMap };
+export { decodeBuildCode };
+export { decodeItemValue };
+export { LCG };
+export { MinHeap };
+export { decompressCoord };
+export { readString };
+export { decodeStatusFlags };
+export { getPrintableAscii };

@@ -1,7 +1,7 @@
 "use strict";
-const { test } = require("node:test");
-const assert = require("node:assert");
-const {
+import { test } from "node:test";
+import assert from "node:assert";
+import {
     LCG,
     MinHeap,
     decompressCoord,
@@ -10,7 +10,7 @@ const {
     getPrintableAscii,
     decodeBuildCode,
     buildDistanceMap,
-} = require("../bot_session");
+} from "../bot_session.js";
 
 test("LCG produces deterministic byte sequence", () => {
     const a = new LCG(42),

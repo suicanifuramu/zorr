@@ -12,8 +12,8 @@
  * are swallowed because the game script is not designed to run
  * outside a real browser; we only need partial execution.
  */
-const vm = require("vm");
-const { TextDecoder, TextEncoder } = require("util");
+import vm from "node:vm";
+import { TextDecoder, TextEncoder } from "node:util";
 
 /**
  * Create a Zorr-compatible sandbox.
@@ -559,4 +559,4 @@ function createZorrSandbox(options = {}) {
     return { sandbox, ctx, MockWebSocket, runScript, captureFromGlobal, cleanup, cleanupPartial };
 }
 
-module.exports = { createZorrSandbox };
+export { createZorrSandbox };

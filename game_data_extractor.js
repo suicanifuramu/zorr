@@ -11,9 +11,9 @@
  *     but no longer used by the pipeline. Detection now uses the raw
  *     mob's `snakeCount` property (Phase A verified).
  */
-const { getOrComputeExtraction, runFullExtraction, extractSnakeIndicesFromRaw } = require("./extraction_pipeline");
-const { detectSnakeProp, SNAKE_PROP_NAMES } = require("./shape_classifier");
-const {
+import { getOrComputeExtraction, runFullExtraction, extractSnakeIndicesFromRaw } from "./extraction_pipeline.js";
+import { detectSnakeProp, SNAKE_PROP_NAMES } from "./shape_classifier.js";
+import {
     slugify,
     normalizeRarities,
     normalizeVariants,
@@ -21,7 +21,7 @@ const {
     normalizeMobs,
     normalizeTalents,
     computeSnakeIndices,
-} = require("./normalizers");
+} from "./normalizers.js";
 
 // Legacy slug patterns — kept for documentation/legacy callers only.
 // The new pipeline does NOT use these; it uses the raw mob's snakeCount.
@@ -82,19 +82,17 @@ async function extractGameData({ timeout = 30000, retries = 2, includeProtocol =
     };
 }
 
-module.exports = {
-    extractGameData,
-    runFullExtraction,
-    extractSnakeIndicesFromRaw,
-    normalizeRarities,
-    normalizeVariants,
-    normalizePetals,
-    normalizeMobs,
-    normalizeTalents,
-    computeSnakeIndices,
-    slugify,
-    isSnakeSlug,
-    SNAKE_SLUG_PATTERNS,
-    SNAKE_PROP_NAMES,
-    detectSnakeProp,
-};
+export { extractGameData };
+export { runFullExtraction };
+export { extractSnakeIndicesFromRaw };
+export { normalizeRarities };
+export { normalizeVariants };
+export { normalizePetals };
+export { normalizeMobs };
+export { normalizeTalents };
+export { computeSnakeIndices };
+export { slugify };
+export { isSnakeSlug };
+export { SNAKE_SLUG_PATTERNS };
+export { SNAKE_PROP_NAMES };
+export { detectSnakeProp };
