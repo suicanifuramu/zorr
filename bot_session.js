@@ -1686,4 +1686,4 @@ class BotSession {
     }
 }
 
-module.exports = { BotSession, buildDistanceMap, decodeBuildCode, decodeItemValue };
+module.exports = { BotSession, buildDistanceMap, decodeBuildCode, decodeItemValue, LCG, MinHeap, decompressCoord, readString, decodeStatusFlags, getPrintableAscii };

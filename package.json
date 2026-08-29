@@ -5,7 +5,8 @@
   "main": "map_server.js",
   "scripts": {
     "start": "node map_server.js",
-    "pathfind": "node pathfinding/server.js"
+    "pathfind": "node pathfinding/server.js",
+    "test": "node --test test/"
   },
   "dependencies": {
     "acorn": "^8.14.0",
