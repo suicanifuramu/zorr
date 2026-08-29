@@ -8,7 +8,7 @@
  *             extraction_pipeline.js. This wrapper remains for backward
  *             compatibility with bot_session.js callers.
  */
-const { getOrComputeExtraction } = require('./extraction_pipeline');
+const { getOrComputeExtraction } = require("./extraction_pipeline");
 
 /**
  * @param {Object} [options]  passed through to the pipeline

@@ -4,15 +4,15 @@
 
 通常の A* は
 
-* 最短距離
-* 最小移動回数
+- 最短距離
+- 最小移動回数
 
 のみを評価する。
 
 そのため道幅が広い場所でも、
 
-* 壁沿い
-* 通路の端
+- 壁沿い
+- 通路の端
 
 を通ることがある。
 
@@ -105,7 +105,7 @@ PNGから通行マップ生成
 全壁をキューへ投入
 
 ```js
-dist[y][x] = 0
+dist[y][x] = 0;
 ```
 
 ---
@@ -115,8 +115,7 @@ dist[y][x] = 0
 上下左右へ拡散
 
 ```js
-dist[next] =
-dist[current] + 1
+dist[next] = dist[current] + 1;
 ```
 
 ---
@@ -125,20 +124,13 @@ dist[current] + 1
 
 ```js
 function buildDistanceMap() {
-
-    const dist = Array.from(
-        { length: map.height },
-        () => Array(map.width).fill(Infinity)
-    );
+    const dist = Array.from({ length: map.height }, () => Array(map.width).fill(Infinity));
 
     const queue = [];
 
     for (let y = 0; y < map.height; y++) {
-
         for (let x = 0; x < map.width; x++) {
-
             if (map.grid[y][x] === 1) {
-
                 dist[y][x] = 0;
 
                 queue.push([x, y]);
@@ -149,38 +141,25 @@ function buildDistanceMap() {
     let head = 0;
 
     const dirs = [
-        [1,0],
-        [-1,0],
-        [0,1],
-        [0,-1]
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
     ];
 
     while (head < queue.length) {
+        const [x, y] = queue[head++];
 
-        const [x,y] = queue[head++];
-
-        for (const [dx,dy] of dirs) {
-
+        for (const [dx, dy] of dirs) {
             const nx = x + dx;
             const ny = y + dy;
 
-            if (
-                nx < 0 ||
-                ny < 0 ||
-                nx >= map.width ||
-                ny >= map.height
-            ) {
+            if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) {
                 continue;
             }
 
-            if (
-                dist[ny][nx]
-                >
-                dist[y][x] + 1
-            ) {
-
-                dist[ny][nx] =
-                    dist[y][x] + 1;
+            if (dist[ny][nx] > dist[y][x] + 1) {
+                dist[ny][nx] = dist[y][x] + 1;
 
                 queue.push([nx, ny]);
             }
@@ -212,7 +191,7 @@ Pathfinding.js は
 ## 通常コスト
 
 ```js
-moveCost = 1
+moveCost = 1;
 ```
 
 ---
@@ -220,9 +199,7 @@ moveCost = 1
 ## 中央寄りコスト
 
 ```js
-moveCost =
-1 +
-20 / (distanceMap[y][x] + 1)
+moveCost = 1 + 20 / (distanceMap[y][x] + 1);
 ```
 
 ---
@@ -282,16 +259,8 @@ cost=1.95
 ゴールまでの距離
 
 ```js
-function heuristic(
-    x,
-    y,
-    endX,
-    endY
-) {
-    return Math.hypot(
-        endX - x,
-        endY - y
-    );
+function heuristic(x, y, endX, endY) {
+    return Math.hypot(endX - x, endY - y);
 }
 ```
 
@@ -302,7 +271,7 @@ function heuristic(
 評価値
 
 ```js
-f = g + h
+f = g + h;
 ```
 
 g
@@ -326,7 +295,7 @@ h
 親ノードを保持
 
 ```js
-parent[y][x]
+parent[y][x];
 ```
 
 から逆順に辿る。
@@ -340,13 +309,13 @@ parent[y][x]
 探索後
 
 ```js
-PF.Util.compressPath()
+PF.Util.compressPath();
 ```
 
 または
 
 ```js
-PF.Util.smoothenPath()
+PF.Util.smoothenPath();
 ```
 
 を適用。
@@ -358,7 +327,7 @@ PF.Util.smoothenPath()
 ## 弱い中央寄せ
 
 ```js
-1 + 5 / (distance + 1)
+1 + 5 / (distance + 1);
 ```
 
 ---
@@ -366,7 +335,7 @@ PF.Util.smoothenPath()
 ## 標準
 
 ```js
-1 + 20 / (distance + 1)
+1 + 20 / (distance + 1);
 ```
 
 ---
@@ -374,7 +343,7 @@ PF.Util.smoothenPath()
 ## 強い中央寄せ
 
 ```js
-1 + 50 / (distance + 1)
+1 + 50 / (distance + 1);
 ```
 
 ---

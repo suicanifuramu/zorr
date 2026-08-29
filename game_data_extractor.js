@@ -11,8 +11,8 @@
  *     but no longer used by the pipeline. Detection now uses the raw
  *     mob's `snakeCount` property (Phase A verified).
  */
-const { getOrComputeExtraction, runFullExtraction, extractSnakeIndicesFromRaw } = require('./extraction_pipeline');
-const { detectSnakeProp, SNAKE_PROP_NAMES } = require('./shape_classifier');
+const { getOrComputeExtraction, runFullExtraction, extractSnakeIndicesFromRaw } = require("./extraction_pipeline");
+const { detectSnakeProp, SNAKE_PROP_NAMES } = require("./shape_classifier");
 const {
     slugify,
     normalizeRarities,
@@ -21,18 +21,11 @@ const {
     normalizeMobs,
     normalizeTalents,
     computeSnakeIndices,
-} = require('./normalizers');
+} = require("./normalizers");
 
 // Legacy slug patterns — kept for documentation/legacy callers only.
 // The new pipeline does NOT use these; it uses the raw mob's snakeCount.
-const SNAKE_SLUG_PATTERNS = [
-    /^bush$/i,
-    /^centipede/i,
-    /^worm/i,
-    /^snake/i,
-    /^rattlesnake/i,
-    /^hel_jellyfish/i,
-];
+const SNAKE_SLUG_PATTERNS = [/^bush$/i, /^centipede/i, /^worm/i, /^snake/i, /^rattlesnake/i, /^hel_jellyfish/i];
 
 function isSnakeSlug(slug) {
     if (!slug) return false;
@@ -68,12 +61,7 @@ function isSnakeSlug(slug) {
  *   _source?: string,
  * }>}
  */
-async function extractGameData({
-    timeout = 30000,
-    retries = 2,
-    includeProtocol = true,
-    includeSource = false,
-} = {}) {
+async function extractGameData({ timeout = 30000, retries = 2, includeProtocol = true, includeSource = false } = {}) {
     const full = await getOrComputeExtraction({ timeout, retries, includeProtocol, includeSource });
     return {
         schemaVersion: 2,
@@ -110,4 +98,3 @@ module.exports = {
     SNAKE_PROP_NAMES,
     detectSnakeProp,
 };
-

@@ -4,15 +4,12 @@ const { PNG } = require("pngjs");
 fs.createReadStream("map.png")
     .pipe(new PNG())
     .on("parsed", function () {
-
         const grid = [];
 
         for (let y = 0; y < this.height; y++) {
-
             const row = [];
 
             for (let x = 0; x < this.width; x++) {
-
                 const idx = (this.width * y + x) * 4;
 
                 const r = this.data[idx];
@@ -32,7 +29,7 @@ fs.createReadStream("map.png")
             JSON.stringify({
                 width: this.width,
                 height: this.height,
-                grid
+                grid,
             })
         );
 

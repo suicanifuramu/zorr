@@ -30,7 +30,7 @@ PNG画像から通行マップを生成する。
 
 ```js
 // convert.js
-brightness < 128 ? 1 : 0  // 黒=壁(1), 白=通行(0)
+brightness < 128 ? 1 : 0; // 黒=壁(1), 白=通行(0)
 ```
 
 出力形式:
@@ -51,10 +51,7 @@ brightness < 128 ? 1 : 0  // 黒=壁(1), 白=通行(0)
 
 ```js
 function buildDistanceMap() {
-    const dist = Array.from(
-        { length: map.height },
-        () => Array(map.width).fill(Infinity)
-    );
+    const dist = Array.from({ length: map.height }, () => Array(map.width).fill(Infinity));
 
     const queue = [];
 
@@ -70,7 +67,12 @@ function buildDistanceMap() {
 
     // BFSで上下左右に拡散
     let head = 0;
-    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    const dirs = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+    ];
 
     while (head < queue.length) {
         const [x, y] = queue[head++];
@@ -113,18 +115,18 @@ function buildDistanceMap() {
 ### 移動コスト
 
 ```js
-moveCost = baseCost + CENTER_COST / (distanceMap[ny][nx] + 1)
+moveCost = baseCost + CENTER_COST / (distanceMap[ny][nx] + 1);
 ```
 
 - `baseCost`: 1（上下左右）または √2（対角）
 - `CENTER_COST`: 20（標準）
 
 | 壁距離 | 移動コスト |
-|--------|-----------|
-| 1      | 11.0      |
-| 5      | 4.33      |
-| 10     | 2.82      |
-| 20     | 1.95      |
+| ------ | ---------- |
+| 1      | 11.0       |
+| 5      | 4.33       |
+| 10     | 2.82       |
+| 20     | 1.95       |
 
 壁に近い → 高コスト（回避）、中央 → 低コスト（通過しやすい）
 
@@ -141,7 +143,7 @@ function heuristic(x, y, endX, endY) {
 ### 評価値
 
 ```js
-f = g + h
+f = g + h;
 ```
 
 - g: 開始地点からの累積コスト
@@ -152,35 +154,26 @@ f = g + h
 ```js
 function findPath() {
     const open = new MinHeap();
-    const gScore = Array.from(
-        { length: map.height },
-        () => Array(map.width).fill(Infinity)
-    );
-    const parent = Array.from(
-        { length: map.height },
-        () => Array(map.width).fill(null)
-    );
-    const closed = Array.from(
-        { length: map.height },
-        () => Array(map.width).fill(false)
-    );
+    const gScore = Array.from({ length: map.height }, () => Array(map.width).fill(Infinity));
+    const parent = Array.from({ length: map.height }, () => Array(map.width).fill(null));
+    const closed = Array.from({ length: map.height }, () => Array(map.width).fill(false));
 
     gScore[start.y][start.x] = 0;
     open.push({
         x: start.x,
         y: start.y,
-        f: heuristic(start.x, start.y, end.x, end.y)
+        f: heuristic(start.x, start.y, end.x, end.y),
     });
 
     const dirs = [
-        [1, 0, 1],           // 右
-        [-1, 0, 1],          // 左
-        [0, 1, 1],           // 下
-        [0, -1, 1],          // 上
-        [1, 1, Math.SQRT2],  // 右下
+        [1, 0, 1], // 右
+        [-1, 0, 1], // 左
+        [0, 1, 1], // 下
+        [0, -1, 1], // 上
+        [1, 1, Math.SQRT2], // 右下
         [-1, 1, Math.SQRT2], // 左下
         [1, -1, Math.SQRT2], // 右上
-        [-1, -1, Math.SQRT2] // 左上
+        [-1, -1, Math.SQRT2], // 左上
     ];
 
     while (open.size > 0) {
@@ -213,7 +206,7 @@ function findPath() {
                 open.push({
                     x: nx,
                     y: ny,
-                    f: tentativeG + heuristic(nx, ny, end.x, end.y)
+                    f: tentativeG + heuristic(nx, ny, end.x, end.y),
                 });
             }
         }
@@ -221,7 +214,8 @@ function findPath() {
 
     // 経路復元
     const path = [];
-    let cx = end.x, cy = end.y;
+    let cx = end.x,
+        cy = end.y;
 
     while (cx !== start.x || cy !== start.y) {
         path.push([cx, cy]);
@@ -253,7 +247,9 @@ const compressed = PF.Util.compressPath(path);
 
 ```js
 class MinHeap {
-    constructor() { this.data = []; }
+    constructor() {
+        this.data = [];
+    }
 
     push(item) {
         this.data.push(item);
@@ -270,7 +266,9 @@ class MinHeap {
         return top;
     }
 
-    get size() { return this.data.length; }
+    get size() {
+        return this.data.length;
+    }
 
     _bubbleUp(i) {
         while (i > 0) {
@@ -303,11 +301,11 @@ class MinHeap {
 
 ## 推奨パラメータ
 
-| 強さ | CENTER_COST |式|
-|------|-------------|---|
-| 弱い | 5 | `1 + 5 / (distance + 1)` |
-| 標準 | 20 | `1 + 20 / (distance + 1)` |
-| 強い | 50 | `1 + 50 / (distance + 1)` |
+| 強さ | CENTER_COST | 式                        |
+| ---- | ----------- | ------------------------- |
+| 弱い | 5           | `1 + 5 / (distance + 1)`  |
+| 標準 | 20          | `1 + 20 / (distance + 1)` |
+| 強い | 50          | `1 + 50 / (distance + 1)` |
 
 ---
 

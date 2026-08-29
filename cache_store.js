@@ -18,21 +18,21 @@
  * public game data), but we keep the file under gitignore-equivalent
  * handling and write atomically via temp + rename.
  */
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 const CACHE_DIR = __dirname;
-const CACHE_PATH = path.join(CACHE_DIR, '.extraction_cache.json');
-const CACHE_TMP = CACHE_PATH + '.tmp';
+const CACHE_PATH = path.join(CACHE_DIR, ".extraction_cache.json");
+const CACHE_TMP = CACHE_PATH + ".tmp";
 
 const SCHEMA_VERSION = 5;
 
 function loadCache() {
     let raw;
     try {
-        raw = fs.readFileSync(CACHE_PATH, 'utf8');
+        raw = fs.readFileSync(CACHE_PATH, "utf8");
     } catch (e) {
-        if (e.code !== 'ENOENT') {
+        if (e.code !== "ENOENT") {
             if (process.env.ZORR_DEBUG) console.error(`[cache_store] read failed: ${e.message}`);
         }
         return null;
@@ -45,16 +45,21 @@ function loadCache() {
         return null;
     }
     if (parsed.schemaVersion !== SCHEMA_VERSION) return null;
-    if (typeof parsed.jsUrl !== 'string') return null;
-    if (typeof parsed.fetchedAt !== 'string') return null;
-    if (!Array.isArray(parsed.rarities) || !Array.isArray(parsed.variants)
-        || !Array.isArray(parsed.petals) || !Array.isArray(parsed.mobs)) return null;
+    if (typeof parsed.jsUrl !== "string") return null;
+    if (typeof parsed.fetchedAt !== "string") return null;
+    if (
+        !Array.isArray(parsed.rarities) ||
+        !Array.isArray(parsed.variants) ||
+        !Array.isArray(parsed.petals) ||
+        !Array.isArray(parsed.mobs)
+    )
+        return null;
     // talents are optional in v4 (warn-only validation upstream)
     return parsed;
 }
 
 function saveCache(result) {
-    if (!result || typeof result !== 'object') return false;
+    if (!result || typeof result !== "object") return false;
     if (result.schemaVersion !== undefined && result.schemaVersion !== SCHEMA_VERSION) return false;
     const slim = {
         schemaVersion: SCHEMA_VERSION,
@@ -72,7 +77,7 @@ function saveCache(result) {
         regions: result.regions ?? [],
         biomes: result.biomes ?? [],
         snakeMobIndices: result.snakeMobIndices ?? [],
-        snakeMethod: result.snakeMethod ?? 'none',
+        snakeMethod: result.snakeMethod ?? "none",
     };
     let json;
     try {
@@ -87,20 +92,36 @@ function saveCache(result) {
         return true;
     } catch (e) {
         if (process.env.ZORR_DEBUG) console.error(`[cache_store] write failed: ${e.message}`);
-        try { fs.unlinkSync(CACHE_TMP); } catch (_) { /* best effort */ }
+        try {
+            fs.unlinkSync(CACHE_TMP);
+        } catch (_) {
+            /* best effort */
+        }
         return false;
     }
 }
 
 function clearCache() {
-    try { fs.unlinkSync(CACHE_PATH); return true; } catch (_) { return false; }
+    try {
+        fs.unlinkSync(CACHE_PATH);
+        return true;
+    } catch (_) {
+        return false;
+    }
 }
 
 function cacheExists() {
-    try { fs.accessSync(CACHE_PATH); return true; } catch (_) { return false; }
+    try {
+        fs.accessSync(CACHE_PATH);
+        return true;
+    } catch (_) {
+        return false;
+    }
 }
 
-function cachePath() { return CACHE_PATH; }
+function cachePath() {
+    return CACHE_PATH;
+}
 
 module.exports = {
     loadCache,

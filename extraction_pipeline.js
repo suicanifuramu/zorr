@@ -16,11 +16,11 @@
  * mock WebSocket's onopen fires, with a configurable hard cap so
  * callers that don't need the protocol version can skip it.
  */
-const vm = require('vm');
-const { fetchObfuscatedSource, fetchJsUrlFromHtml } = require('./source_fetcher');
-const { findCandidates, findFunctionBody, injectCaptures } = require('./ast_capture');
-const { createZorrSandbox } = require('./sandbox_factory');
-const { classify } = require('./shape_classifier');
+const vm = require("vm");
+const { fetchObfuscatedSource, fetchJsUrlFromHtml } = require("./source_fetcher");
+const { findCandidates, findFunctionBody, injectCaptures } = require("./ast_capture");
+const { createZorrSandbox } = require("./sandbox_factory");
+const { classify } = require("./shape_classifier");
 const {
     normalizeRarities,
     normalizeVariants,
@@ -30,22 +30,22 @@ const {
     normalizeBiomeMobs,
     normalizeServerList,
     computeSnakeIndices,
-} = require('./normalizers');
-const _talentData = require('./talent_data');
-const cacheStore = require('./cache_store');
+} = require("./normalizers");
+const _talentData = require("./talent_data");
+const cacheStore = require("./cache_store");
 // P10: Worker-thread support (opt-in via ZORR_USE_VM_WORKER=1)
-const _useWorker = process.env.ZORR_USE_VM_WORKER === '1';
-const _workerClient = _useWorker ? require('./vm_worker_client') : null;
+const _useWorker = process.env.ZORR_USE_VM_WORKER === "1";
+const _workerClient = _useWorker ? require("./vm_worker_client") : null;
 
 // ============================================================================
 // Cache + in-flight coalescing
 // ============================================================================
-let _cached = null;            // { result, expiresAt, jsUrl }
-let _inflight = null;          // Promise<result>
-let _lastJsUrl = null;         // jsUrl of the currently cached extraction
-let _lastUrlCheckMs = 0;       // timestamp of last URL check
-let _lastUrlChangeMs = 0;      // timestamp of last detected URL change
-let _urlCheckTimer = null;     // P7: background interval handle
+let _cached = null; // { result, expiresAt, jsUrl }
+let _inflight = null; // Promise<result>
+let _lastJsUrl = null; // jsUrl of the currently cached extraction
+let _lastUrlCheckMs = 0; // timestamp of last URL check
+let _lastUrlChangeMs = 0; // timestamp of last detected URL change
+let _urlCheckTimer = null; // P7: background interval handle
 
 // How often to perform the cheap HTML-only URL check (ms). 60s keeps
 // the check rate low while still detecting game updates promptly.
@@ -97,7 +97,7 @@ function _ensureUrlCheckTimer() {
             }
         }
     }, URL_CHECK_INTERVAL_MS);
-    if (typeof _urlCheckTimer.unref === 'function') _urlCheckTimer.unref();
+    if (typeof _urlCheckTimer.unref === "function") _urlCheckTimer.unref();
 }
 
 /**
@@ -109,7 +109,7 @@ function getCacheStatus() {
         cached: _cached !== null,
         jsUrl: _lastJsUrl,
         fetchedAt: _cached?.result?.fetchedAt ?? null,
-        age: _cached ? (Date.now() - new Date(_cached.result.fetchedAt).getTime()) : 0,
+        age: _cached ? Date.now() - new Date(_cached.result.fetchedAt).getTime() : 0,
         lastCheck: _lastUrlCheckMs,
         lastChange: _lastUrlChangeMs,
         diskCached: cacheStore.cacheExists(),
@@ -142,7 +142,7 @@ function invalidateCache(opts = {}) {
  * server-list shape scan. Throws on parse error (caller catches).
  */
 function _parseRootAst(source) {
-    return acorn.parse(source, { ecmaVersion: 2022, sourceType: 'script' });
+    return acorn.parse(source, { ecmaVersion: 2022, sourceType: "script" });
 }
 
 // ============================================================================
@@ -160,53 +160,74 @@ function _parseRootAst(source) {
 // In both cases the resulting value is a string array of length >= 5
 // (anything shorter is unlikely to be a biome list).
 // ============================================================================
-const acorn = require('acorn');
+const acorn = require("acorn");
 
 function _buildTxResolver(source) {
     const resolver = new Map();
     try {
-        const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: 'script' });
+        const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: "script" });
         const walk = (node) => {
-            if (!node || typeof node !== 'object') return;
-            if (Array.isArray(node)) { for (const x of node) walk(x); return; }
-            if (node.type === 'VariableDeclarator'
-                && node.id && node.id.type === 'Identifier'
-                && !resolver.has(node.id.name)
-                && node.init && node.init.type === 'ArrayExpression') {
+            if (!node || typeof node !== "object") return;
+            if (Array.isArray(node)) {
+                for (const x of node) walk(x);
+                return;
+            }
+            if (
+                node.type === "VariableDeclarator" &&
+                node.id &&
+                node.id.type === "Identifier" &&
+                !resolver.has(node.id.name) &&
+                node.init &&
+                node.init.type === "ArrayExpression"
+            ) {
                 const els = node.init.elements;
                 // Try static: all literal strings
                 const staticArr = els
-                    .map(e => e && e.type === 'Literal' && typeof e.value === 'string' ? e.value : null)
-                    .filter(n => typeof n === 'string');
+                    .map((e) => (e && e.type === "Literal" && typeof e.value === "string" ? e.value : null))
+                    .filter((n) => typeof n === "string");
                 if (staticArr.length >= 5) {
                     resolver.set(node.id.name, staticArr);
                 } else {
                     // Try dynamic: all CallExpression of Identifier with numeric literal arg
                     const dynArgs = els
-                        .map(e => {
-                            if (e && e.type === 'CallExpression'
-                                && e.callee && e.callee.type === 'Identifier'
-                                && e.arguments.length === 1
-                                && e.arguments[0].type === 'Literal'
-                                && typeof e.arguments[0].value === 'number') {
+                        .map((e) => {
+                            if (
+                                e &&
+                                e.type === "CallExpression" &&
+                                e.callee &&
+                                e.callee.type === "Identifier" &&
+                                e.arguments.length === 1 &&
+                                e.arguments[0].type === "Literal" &&
+                                typeof e.arguments[0].value === "number"
+                            ) {
                                 return { fn: e.callee.name, arg: e.arguments[0].value };
                             }
                             return null;
                         })
-                        .filter(x => x);
+                        .filter((x) => x);
                     if (dynArgs.length >= 5) {
                         resolver.set(node.id.name, { __dynamic: true, calls: dynArgs });
                     }
                 }
             }
             for (const k of Object.keys(node)) {
-                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                    || k === 'range' || k === 'raw' || k === 'comments') continue;
+                if (
+                    k === "loc" ||
+                    k === "start" ||
+                    k === "end" ||
+                    k === "type" ||
+                    k === "range" ||
+                    k === "raw" ||
+                    k === "comments"
+                )
+                    continue;
                 walk(node[k]);
             }
         };
         walk(ast);
-    } catch (_) { /* ignore parse errors; resolver stays empty */ }
+    } catch (_) {
+        /* ignore parse errors; resolver stays empty */
+    }
     return resolver;
 }
 
@@ -221,10 +242,10 @@ function _resolveDynamicResolver(resolver, callResolver) {
         const out = [];
         for (const { fn, arg } of value.calls) {
             const f = callResolver.get(fn);
-            if (typeof f === 'function') {
+            if (typeof f === "function") {
                 try {
                     const r = f(arg);
-                    out.push(typeof r === 'string' ? r : null);
+                    out.push(typeof r === "string" ? r : null);
                 } catch (_) {
                     out.push(null);
                 }
@@ -243,8 +264,7 @@ function extractSnakeIndicesFromRaw(mobs) {
     const indices = [];
     for (let i = 0; i < mobs.length; i++) {
         const m = mobs[i];
-        if (m && typeof m === 'object' && 'snakeCount' in m
-            && typeof m.snakeCount === 'number' && m.snakeCount > 0) {
+        if (m && typeof m === "object" && "snakeCount" in m && typeof m.snakeCount === "number" && m.snakeCount > 0) {
             indices.push(i);
         }
     }
@@ -267,7 +287,7 @@ async function _fetchStage({ retries }) {
         } catch (e) {
             lastErr = e;
             if (attempt < retries) {
-                await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
             }
         }
     }
@@ -288,22 +308,33 @@ function _parseAndInject(source) {
  */
 function _scanSourceForVersion(source) {
     try {
-        const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: 'script' });
-        const FUNC_TYPES = new Set(['FunctionDeclaration', 'FunctionExpression', 'ArrowFunctionExpression']);
+        const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: "script" });
+        const FUNC_TYPES = new Set(["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"]);
 
         // Walk from a node upward to find the tightest (nearest) enclosing function.
         // We do this by scanning depth-first and keeping the LAST match (innermost).
         function findEnclosingFunc(startPos) {
             let result = null;
             const walk = (node) => {
-                if (!node || typeof node !== 'object') return;
-                if (Array.isArray(node)) { for (const x of node) walk(x); return; }
+                if (!node || typeof node !== "object") return;
+                if (Array.isArray(node)) {
+                    for (const x of node) walk(x);
+                    return;
+                }
                 if (FUNC_TYPES.has(node.type) && node.start <= startPos && node.end >= startPos) {
                     result = node; // keep overwriting — last match is innermost
                 }
                 for (const k of Object.keys(node)) {
-                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                    if (
+                        k === "loc" ||
+                        k === "start" ||
+                        k === "end" ||
+                        k === "type" ||
+                        k === "range" ||
+                        k === "raw" ||
+                        k === "comments"
+                    )
+                        continue;
                     walk(node[k]);
                 }
             };
@@ -319,8 +350,11 @@ function _scanSourceForVersion(source) {
             // Walk the entire AST, collecting var/let/const declarations
             // that are visible at startPos: declarations whose scope contains startPos.
             const walk = (node) => {
-                if (!node || typeof node !== 'object') return;
-                if (Array.isArray(node)) { for (const x of node) walk(x); return; }
+                if (!node || typeof node !== "object") return;
+                if (Array.isArray(node)) {
+                    for (const x of node) walk(x);
+                    return;
+                }
                 if (FUNC_TYPES.has(node.type)) {
                     // Only enter functions whose range contains startPos
                     if (node.start <= startPos && node.end >= startPos) {
@@ -328,19 +362,34 @@ function _scanSourceForVersion(source) {
                         const body = node.body;
                         if (body) {
                             const collectInBody = (n) => {
-                                if (!n || typeof n !== 'object') return;
-                                if (Array.isArray(n)) { for (const x of n) collectInBody(x); return; }
+                                if (!n || typeof n !== "object") return;
+                                if (Array.isArray(n)) {
+                                    for (const x of n) collectInBody(x);
+                                    return;
+                                }
                                 // Skip nested functions (they have their own scope)
                                 if (FUNC_TYPES.has(n.type) && n !== node) return;
-                                if (n.type === 'VariableDeclarator'
-                                    && n.id && n.id.type === 'Identifier'
-                                    && n.init && n.init.type === 'Literal'
-                                    && typeof n.init.value === 'number') {
+                                if (
+                                    n.type === "VariableDeclarator" &&
+                                    n.id &&
+                                    n.id.type === "Identifier" &&
+                                    n.init &&
+                                    n.init.type === "Literal" &&
+                                    typeof n.init.value === "number"
+                                ) {
                                     if (!vars.has(n.id.name)) vars.set(n.id.name, n.init.value);
                                 }
                                 for (const k of Object.keys(n)) {
-                                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                                    if (
+                                        k === "loc" ||
+                                        k === "start" ||
+                                        k === "end" ||
+                                        k === "type" ||
+                                        k === "range" ||
+                                        k === "raw" ||
+                                        k === "comments"
+                                    )
+                                        continue;
                                     collectInBody(n[k]);
                                 }
                             };
@@ -349,8 +398,16 @@ function _scanSourceForVersion(source) {
                     }
                 }
                 for (const k of Object.keys(node)) {
-                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                    if (
+                        k === "loc" ||
+                        k === "start" ||
+                        k === "end" ||
+                        k === "type" ||
+                        k === "range" ||
+                        k === "raw" ||
+                        k === "comments"
+                    )
+                        continue;
                     walk(node[k]);
                 }
             };
@@ -361,23 +418,42 @@ function _scanSourceForVersion(source) {
         // Find DataView constructor nodes with their enclosing function scope
         const dvEntries = []; // {name, startPos, scopedVars}
         const findDV = (node) => {
-            if (!node || typeof node !== 'object') return;
-            if (Array.isArray(node)) { for (const x of node) findDV(x); return; }
-            if (node.type === 'VariableDeclarator'
-                && node.id && node.id.type === 'Identifier'
-                && node.init && node.init.type === 'NewExpression'
-                && node.init.callee && node.init.callee.type === 'Identifier'
-                && node.init.callee.name === 'DataView'
-                && node.init.arguments && node.init.arguments.length >= 1
-                && node.init.arguments[0] && node.init.arguments[0].type === 'NewExpression'
-                && node.init.arguments[0].callee && node.init.arguments[0].callee.type === 'Identifier'
-                && node.init.arguments[0].callee.name === 'ArrayBuffer') {
+            if (!node || typeof node !== "object") return;
+            if (Array.isArray(node)) {
+                for (const x of node) findDV(x);
+                return;
+            }
+            if (
+                node.type === "VariableDeclarator" &&
+                node.id &&
+                node.id.type === "Identifier" &&
+                node.init &&
+                node.init.type === "NewExpression" &&
+                node.init.callee &&
+                node.init.callee.type === "Identifier" &&
+                node.init.callee.name === "DataView" &&
+                node.init.arguments &&
+                node.init.arguments.length >= 1 &&
+                node.init.arguments[0] &&
+                node.init.arguments[0].type === "NewExpression" &&
+                node.init.arguments[0].callee &&
+                node.init.arguments[0].callee.type === "Identifier" &&
+                node.init.arguments[0].callee.name === "ArrayBuffer"
+            ) {
                 const scopedVars = collectScopedVars(node.start);
                 dvEntries.push({ name: node.id.name, startPos: node.start, scopedVars });
             }
             for (const k of Object.keys(node)) {
-                if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                    || k === 'range' || k === 'raw' || k === 'comments') continue;
+                if (
+                    k === "loc" ||
+                    k === "start" ||
+                    k === "end" ||
+                    k === "type" ||
+                    k === "range" ||
+                    k === "raw" ||
+                    k === "comments"
+                )
+                    continue;
                 findDV(node[k]);
             }
         };
@@ -389,37 +465,55 @@ function _scanSourceForVersion(source) {
             const scopedVars = entry.scopedVars;
             function resolveArg(arg) {
                 if (!arg) return null;
-                if (arg.type === 'Literal' && typeof arg.value === 'number') return arg.value;
-                if (arg.type === 'Identifier' && scopedVars.has(arg.name)) return scopedVars.get(arg.name);
+                if (arg.type === "Literal" && typeof arg.value === "number") return arg.value;
+                if (arg.type === "Identifier" && scopedVars.has(arg.name)) return scopedVars.get(arg.name);
                 return null;
             }
 
             let found = null;
             const scan = (node, parent) => {
-                if (found || !node || typeof node !== 'object') return;
-                if (Array.isArray(node)) { for (const x of node) scan(x, node); return; }
+                if (found || !node || typeof node !== "object") return;
+                if (Array.isArray(node)) {
+                    for (const x of node) scan(x, node);
+                    return;
+                }
 
-                if (node.type === 'CallExpression'
-                    && node.callee && node.callee.type === 'MemberExpression'
-                    && node.callee.object && node.callee.object.type === 'Identifier'
-                    && node.callee.object.name === entry.name
-                    && node.arguments && node.arguments.length >= 2) {
+                if (
+                    node.type === "CallExpression" &&
+                    node.callee &&
+                    node.callee.type === "MemberExpression" &&
+                    node.callee.object &&
+                    node.callee.object.type === "Identifier" &&
+                    node.callee.object.name === entry.name &&
+                    node.arguments &&
+                    node.arguments.length >= 2
+                ) {
                     const v = resolveArg(node.arguments[1]);
                     if (v !== null && v >= 1 && v <= 1000) {
                         if (parent && Array.isArray(parent)) {
                             for (const sib of parent) {
                                 if (sib === node) continue;
-                                if (sib && sib.type === 'CallExpression'
-                                    && sib.callee && sib.callee.type === 'MemberExpression'
-                                    && sib.callee.object && sib.callee.object.type === 'Identifier'
-                                    && sib.callee.object.name === entry.name
-                                    && sib.arguments && sib.arguments.length >= 1) {
-                                    const hasUpdate = sib.arguments.some(a =>
-                                        a && (a.type === 'UpdateExpression'
-                                            || (a.type === 'SequenceExpression'
-                                                && a.expressions.some(e => e.type === 'UpdateExpression'))));
+                                if (
+                                    sib &&
+                                    sib.type === "CallExpression" &&
+                                    sib.callee &&
+                                    sib.callee.type === "MemberExpression" &&
+                                    sib.callee.object &&
+                                    sib.callee.object.type === "Identifier" &&
+                                    sib.callee.object.name === entry.name &&
+                                    sib.arguments &&
+                                    sib.arguments.length >= 1
+                                ) {
+                                    const hasUpdate = sib.arguments.some(
+                                        (a) =>
+                                            a &&
+                                            (a.type === "UpdateExpression" ||
+                                                (a.type === "SequenceExpression" &&
+                                                    a.expressions.some((e) => e.type === "UpdateExpression")))
+                                    );
                                     if (hasUpdate) {
-                                        found = v; return;
+                                        found = v;
+                                        return;
                                     }
                                 }
                             }
@@ -427,8 +521,16 @@ function _scanSourceForVersion(source) {
                     }
                 }
                 for (const k of Object.keys(node)) {
-                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                    if (
+                        k === "loc" ||
+                        k === "start" ||
+                        k === "end" ||
+                        k === "type" ||
+                        k === "range" ||
+                        k === "raw" ||
+                        k === "comments"
+                    )
+                        continue;
                     scan(node[k], node);
                 }
             };
@@ -437,7 +539,9 @@ function _scanSourceForVersion(source) {
         }
 
         return null;
-    } catch (_) { return null; }
+    } catch (_) {
+        return null;
+    }
 }
 
 /**
@@ -449,22 +553,29 @@ function _classifyCaptured(captured, candidates) {
     const classified = { rarity: null, variant: null, petal: null, mob: null, biomeMobs: null };
     const classifiedSizes = { variant: 0, petal: 0, mob: 0, biomeMobs: 0 };
     for (const c of candidates) {
-        if (classified.rarity && classified.variant && classified.petal && classified.mob && classified.biomeMobs) break;
+        if (classified.rarity && classified.variant && classified.petal && classified.mob && classified.biomeMobs)
+            break;
         const v = captured[c.name];
         if (v == null) continue;
         const result = classify(v);
         if (process.env.ZORR_DEBUG) {
-            console.log(`[classify] ${c.name} =`, v && v.length, 'kind:', result ? result.kind : 'null');
+            console.log(`[classify] ${c.name} =`, v && v.length, "kind:", result ? result.kind : "null");
         }
         if (result && !classified[result.kind]) {
             classified[result.kind] = result.items;
             if (result.kind in classifiedSizes) {
-                classifiedSizes[result.kind] = Array.isArray(result.items) ? result.items.length
-                    : (result.items && typeof result.items === 'object' ? Object.keys(result.items).length : 0);
+                classifiedSizes[result.kind] = Array.isArray(result.items)
+                    ? result.items.length
+                    : result.items && typeof result.items === "object"
+                      ? Object.keys(result.items).length
+                      : 0;
             }
         } else if (result && result.kind in classifiedSizes) {
-            const newSize = Array.isArray(result.items) ? result.items.length
-                : (result.items && typeof result.items === 'object' ? Object.keys(result.items).length : 0);
+            const newSize = Array.isArray(result.items)
+                ? result.items.length
+                : result.items && typeof result.items === "object"
+                  ? Object.keys(result.items).length
+                  : 0;
             if (newSize > classifiedSizes[result.kind]) {
                 classified[result.kind] = result.items;
                 classifiedSizes[result.kind] = newSize;
@@ -494,7 +605,9 @@ async function _runVmStage({ injected, candidates, timeout }) {
         // are JSON-serialized in the worker (to avoid structured-clone
         // failures on native functions) and deserialized here.
         const job = await _workerClient.runInWorker({
-            injected, candidates, timeout,
+            injected,
+            candidates,
+            timeout,
             includeProtocol: true,
             handshakeMaxWaitMs: 3000,
         });
@@ -510,14 +623,18 @@ async function _runVmStage({ injected, candidates, timeout }) {
 
         const sandboxApi = createZorrSandbox({
             hooks: {
-                onWebSocketOpen: () => { handshakeReceived = true; },
+                onWebSocketOpen: () => {
+                    handshakeReceived = true;
+                },
                 onWebSocketSend: (bytes) => {
                     if (protocolVersion !== null) return;
                     if (bytes.length >= 5 && bytes[0] === 0) {
                         try {
                             const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
                             protocolVersion = view.getUint32(1);
-                        } catch (_) { /* ignore malformed */ }
+                        } catch (_) {
+                            /* ignore malformed */
+                        }
                     }
                 },
                 onDataViewSetUint32: (byteOffset, value) => {
@@ -534,17 +651,17 @@ async function _runVmStage({ injected, candidates, timeout }) {
         // code may create async operations that reject after the
         // synchronous VM run has finished, e.g. tW.Cu internals).
         const onRej = () => {};
-        process.on('unhandledRejection', onRej);
+        process.on("unhandledRejection", onRej);
         try {
-            sandboxApi.runScript(injected, { filename: 'zorr.js', timeout });
+            sandboxApi.runScript(injected, { filename: "zorr.js", timeout });
         } finally {
-            process.off('unhandledRejection', onRej);
+            process.off("unhandledRejection", onRej);
             // P4: Restore Array/Map prototype patches immediately.
             // DataView.prototype.setUint32 is deferred until after the
             // handshake wait completes (the game builds the handshake
             // inside MockWebSocket.onopen which fires via setTimeout(10)
             // AFTER runScript() returns).
-            if (typeof sandboxApi.cleanupPartial === 'function') {
+            if (typeof sandboxApi.cleanupPartial === "function") {
                 sandboxApi.cleanupPartial();
             }
         }
@@ -553,7 +670,7 @@ async function _runVmStage({ injected, candidates, timeout }) {
         // Collect captured game-data values
         captured = {};
         for (const c of candidates) {
-            const v = sandboxApi.sandbox['__zorr_' + c.name];
+            const v = sandboxApi.sandbox["__zorr_" + c.name];
             captured[c.name] = v === undefined ? null : v;
         }
 
@@ -567,7 +684,7 @@ async function _runVmStage({ injected, candidates, timeout }) {
         });
         // Expose cleanup for deferred DataView prototype restoration
         _deferredCleanup = () => {
-            if (typeof sandboxApi.cleanup === 'function') {
+            if (typeof sandboxApi.cleanup === "function") {
                 sandboxApi.cleanup();
             }
         };
@@ -578,7 +695,7 @@ async function _runVmStage({ injected, candidates, timeout }) {
     // Fallback: check captured values for a protocol-version candidate
     // from numeric-literal variable declarations (420-460 range).
     if (protocolVersion === null) {
-        const versionCands = candidates.filter(c => c.initKind === 'version');
+        const versionCands = candidates.filter((c) => c.initKind === "version");
         if (versionCands.length > 0 && process.env.ZORR_DEBUG) {
             console.log(`[debug] version candidates (${versionCands.length}):`);
             for (const c of versionCands) {
@@ -588,7 +705,7 @@ async function _runVmStage({ injected, candidates, timeout }) {
         }
         for (const c of versionCands) {
             const v = captured[c.name];
-            if (typeof v === 'number' && v >= 1 && v <= 1000) {
+            if (typeof v === "number" && v >= 1 && v <= 1000) {
                 protocolVersion = v;
                 break;
             }
@@ -599,9 +716,7 @@ async function _runVmStage({ injected, candidates, timeout }) {
 }
 
 /** Stage 4: wait for the WebSocket handshake (one-shot, hard cap). */
-async function _waitForHandshake(getState, {
-    includeProtocol, handshakeMaxWaitMs,
-}) {
+async function _waitForHandshake(getState, { includeProtocol, handshakeMaxWaitMs }) {
     if (!includeProtocol) {
         const { protocolVersion } = getState();
         return { protocolVersion };
@@ -611,11 +726,11 @@ async function _waitForHandshake(getState, {
         const { handshakeReceived } = getState();
         if (handshakeReceived) break;
         if (Date.now() - tWaitStart >= handshakeMaxWaitMs) break;
-        await new Promise(r => setTimeout(r, 20));
+        await new Promise((r) => setTimeout(r, 20));
     }
     const { handshakeReceived, protocolVersion } = getState();
     if (handshakeReceived && protocolVersion === null) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
     }
     return { protocolVersion: getState().protocolVersion };
 }
@@ -661,18 +776,19 @@ async function runFullExtraction({
 
     // Stage 3: VM + classify (one-shot; async due to P10 worker support)
     const { captured, classified, vmRunMs, getHandshakeState, deferredCleanup } = await _runVmStage({
-        injected, candidates, timeout,
+        injected,
+        candidates,
+        timeout,
     });
 
     // Validate classification completeness (4 core kinds are required)
-    if (!classified.rarity || !classified.variant
-        || !classified.petal || !classified.mob) {
+    if (!classified.rarity || !classified.variant || !classified.petal || !classified.mob) {
         throw new Error(
             `Incomplete classification: ` +
-            `rarity=${!!classified.rarity} ` +
-            `variant=${!!classified.variant} ` +
-            `petal=${!!classified.petal} ` +
-            `mob=${!!classified.mob}`
+                `rarity=${!!classified.rarity} ` +
+                `variant=${!!classified.variant} ` +
+                `petal=${!!classified.petal} ` +
+                `mob=${!!classified.mob}`
         );
     }
 
@@ -697,7 +813,7 @@ async function runFullExtraction({
     const callResolver = new Map();
     for (const c of candidates) {
         const v = captured[c.name];
-        if (typeof v === 'function') {
+        if (typeof v === "function") {
             callResolver.set(c.name, v);
         }
     }
@@ -711,55 +827,80 @@ async function runFullExtraction({
     while (added) {
         added = false;
         try {
-            const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: 'script' });
+            const ast = acorn.parse(source, { ecmaVersion: 2022, sourceType: "script" });
             const walk = (node) => {
-                if (!node || typeof node !== 'object') return;
-                if (Array.isArray(node)) { for (const x of node) walk(x); return; }
-                if (node.type === 'VariableDeclarator'
-                    && node.id && node.id.type === 'Identifier'
-                    && node.init && node.init.type === 'Identifier'
-                    && !callResolver.has(node.id.name)) {
+                if (!node || typeof node !== "object") return;
+                if (Array.isArray(node)) {
+                    for (const x of node) walk(x);
+                    return;
+                }
+                if (
+                    node.type === "VariableDeclarator" &&
+                    node.id &&
+                    node.id.type === "Identifier" &&
+                    node.init &&
+                    node.init.type === "Identifier" &&
+                    !callResolver.has(node.id.name)
+                ) {
                     const target = callResolver.get(node.init.name);
-                    if (typeof target === 'function') {
+                    if (typeof target === "function") {
                         callResolver.set(node.id.name, target);
                         added = true;
                     }
                 }
                 for (const k of Object.keys(node)) {
-                    if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                        || k === 'range' || k === 'raw' || k === 'comments') continue;
+                    if (
+                        k === "loc" ||
+                        k === "start" ||
+                        k === "end" ||
+                        k === "type" ||
+                        k === "range" ||
+                        k === "raw" ||
+                        k === "comments"
+                    )
+                        continue;
                     walk(node[k]);
                 }
             };
             walk(ast);
-        } catch (_) { /* parse error stops alias expansion */ }
+        } catch (_) {
+            /* parse error stops alias expansion */
+        }
     }
-    if (process.env.ZORR_DEBUG) console.log(`[debug] callResolver keys:`, Array.from(callResolver.keys()), 'Od captured:', callResolver.has('Od'));
+    if (process.env.ZORR_DEBUG)
+        console.log(
+            `[debug] callResolver keys:`,
+            Array.from(callResolver.keys()),
+            "Od captured:",
+            callResolver.has("Od")
+        );
     _resolveDynamicResolver(txResolver, callResolver);
     const rootAst = _parseRootAst(source);
     const { regions, biomes, functionName } = normalizeServerList(rootAst, txResolver, callResolver);
     if (regions.length === 0 && biomes.length === 0) {
-        console.log(`\x1b[33m[warn] server-list tabs not found in AST; map.html will show empty region/biome dropdowns\x1b[0m`);
+        console.log(
+            `\x1b[33m[warn] server-list tabs not found in AST; map.html will show empty region/biome dropdowns\x1b[0m`
+        );
     } else {
-        console.log(`\x1b[36m[extraction] server-list: ${regions.length} regions, ${biomes.length} biomes (function: ${functionName || '?'})\x1b[0m`);
+        console.log(
+            `\x1b[36m[extraction] server-list: ${regions.length} regions, ${biomes.length} biomes (function: ${functionName || "?"})\x1b[0m`
+        );
     }
 
     // Stage 4: handshake wait (one-shot, with hard cap)
-    let { protocolVersion } = await _waitForHandshake(
-        getHandshakeState,
-        { includeProtocol, handshakeMaxWaitMs }
-    );
+    let { protocolVersion } = await _waitForHandshake(getHandshakeState, { includeProtocol, handshakeMaxWaitMs });
 
     // Now safe to restore DataView.prototype.setUint32 (the handshake
     // wait is complete; the game's onopen has already fired).
-    if (typeof deferredCleanup === 'function') deferredCleanup();
+    if (typeof deferredCleanup === "function") deferredCleanup();
 
     // Stage 4b: static source scan fallback if handshake didn't yield a version
     if (protocolVersion === null && includeProtocol) {
         const scannedVersion = _scanSourceForVersion(source);
         if (scannedVersion !== null) {
             protocolVersion = scannedVersion;
-            if (process.env.ZORR_DEBUG) console.log(`[extraction] protocol version from source scan: ${protocolVersion}`);
+            if (process.env.ZORR_DEBUG)
+                console.log(`[extraction] protocol version from source scan: ${protocolVersion}`);
         }
     }
 
@@ -789,22 +930,27 @@ async function runFullExtraction({
         if (startIdx >= 0) {
             // Walk back to find the opening brace
             let jsonStart = startIdx;
-            while (jsonStart > 0 && source[jsonStart] !== '{') jsonStart--;
+            while (jsonStart > 0 && source[jsonStart] !== "{") jsonStart--;
             // Walk forward to find the matching closing braces
             let depth = 0;
             let jsonEnd = jsonStart;
             while (jsonEnd < source.length) {
-                if (source[jsonEnd] === '{') depth++;
-                else if (source[jsonEnd] === '}') {
+                if (source[jsonEnd] === "{") depth++;
+                else if (source[jsonEnd] === "}") {
                     depth--;
-                    if (depth === 0) { jsonEnd++; break; }
+                    if (depth === 0) {
+                        jsonEnd++;
+                        break;
+                    }
                 }
                 jsonEnd++;
             }
             const rawJson = source.substring(jsonStart, jsonEnd);
             try {
                 biomeMobs = normalizeBiomeMobs(JSON.parse(rawJson));
-            } catch (_) { /* ignore parse error */ }
+            } catch (_) {
+                /* ignore parse error */
+            }
         }
         if (process.env.ZORR_DEBUG) {
             console.log(`[biomeMobs-fallback] keys=${Object.keys(biomeMobs).length}`);
@@ -814,24 +960,29 @@ async function runFullExtraction({
 
     // The two detection methods should agree. If they don't, prefer
     // the property-based detection (rawSnakeIndices) as authoritative.
-    const agreement = rawSnakeIndices.length === snakeMobIndices.length
-        && rawSnakeIndices.every((v, i) => v === snakeMobIndices[i]);
+    const agreement =
+        rawSnakeIndices.length === snakeMobIndices.length && rawSnakeIndices.every((v, i) => v === snakeMobIndices[i]);
     const finalSnakeIndices = agreement ? snakeMobIndices : rawSnakeIndices;
-    const snakeMethod = finalSnakeIndices.length > 0
-        ? (agreement ? 'snakeCount+isSnake' : 'snakeCount')
-        : 'none';
+    const snakeMethod = finalSnakeIndices.length > 0 ? (agreement ? "snakeCount+isSnake" : "snakeCount") : "none";
 
     // P2: source is conditionally included. Internally, we keep `source`
     // available on the cache so a later `includeSource: true` call can
     // reuse the same fetch without re-hitting the network.
     return {
         source,
-        jsUrl, htmlUrl,
+        jsUrl,
+        htmlUrl,
         protocolVersion,
-        rarities, variants, petals, mobs, talents, biomeMobs,
+        rarities,
+        variants,
+        petals,
+        mobs,
+        talents,
+        biomeMobs,
         snakeMobIndices: finalSnakeIndices,
         snakeMethod,
-        regions, biomes,
+        regions,
+        biomes,
         vmRunMs,
         fetchedAt,
     };
@@ -874,10 +1025,13 @@ async function getOrComputeExtraction(options = {}) {
     // Helper: return a projection of the cached result. The full result
     // (including the 1.4MB `source` field) stays in the cache so a later
     // `includeSource: true` call can reuse the same fetch (P1).
-    const project = (full) => includeSource ? full : (() => {
-        const { source, ...rest } = full;
-        return rest;
-    })();
+    const project = (full) =>
+        includeSource
+            ? full
+            : (() => {
+                  const { source, ...rest } = full;
+                  return rest;
+              })();
 
     // 1. In-process memory cache hit
     if (_cached && (_cached.expiresAt === Infinity || Date.now() < _cached.expiresAt)) {
@@ -885,7 +1039,7 @@ async function getOrComputeExtraction(options = {}) {
         // (started lazily on first cache hit). Per-call latency is
         // therefore not affected by the URL check at all.
         if (!skipUrlCheck) _ensureUrlCheckTimer();
-        if (process.env.ZORR_DEBUG) _logCacheLoad('memory', _lastJsUrl);
+        if (process.env.ZORR_DEBUG) _logCacheLoad("memory", _lastJsUrl);
         return project(_cached.result);
     }
 
@@ -905,11 +1059,11 @@ async function getOrComputeExtraction(options = {}) {
                 // Sanity: also verify the URL via a single HTML check
                 // before accepting the disk cache (best effort).
                 _cached = {
-                    result: { ...disk, source: '' },
+                    result: { ...disk, source: "" },
                     expiresAt: ttlMs === Infinity ? Infinity : Date.now() + ttlMs,
                 };
                 if (!_lastJsUrl) _lastJsUrl = disk.jsUrl;
-                _logCacheLoad('disk', disk.jsUrl);
+                _logCacheLoad("disk", disk.jsUrl);
                 if (!skipUrlCheck) _ensureUrlCheckTimer();
                 return project(_cached.result);
             }

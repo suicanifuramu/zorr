@@ -5,33 +5,38 @@
  * with no VM/fetch/cache concerns — extracted here to avoid a circular
  * dependency between extraction_pipeline and game_data_extractor.
  */
-const { detectSnakeProp } = require('./shape_classifier');
+const { detectSnakeProp } = require("./shape_classifier");
 
 function slugify(name) {
-    if (typeof name !== 'string') return '';
-    return name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    if (typeof name !== "string") return "";
+    return name
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
 }
 
 function normalizeRarities(items) {
     if (!Array.isArray(items)) return [];
-    return items.map((t, idx) => {
-        // Tolerant: some captures may have a fully-built object, others the
-        // raw tuple. Handle both.
-        const name = t.name || t[0];
-        const color = t.color || t[1];
-        const weight = t.craftRate ?? t[2];
-        return {
-            id: t.id ?? idx,
-            name: String(name || ''),
-            color: String(color || ''),
-            weight: typeof weight === 'number' ? weight : 0,
-            slug: slugify(name),
-        };
-    }).filter(r => r.name);
+    return items
+        .map((t, idx) => {
+            // Tolerant: some captures may have a fully-built object, others the
+            // raw tuple. Handle both.
+            const name = t.name || t[0];
+            const color = t.color || t[1];
+            const weight = t.craftRate ?? t[2];
+            return {
+                id: t.id ?? idx,
+                name: String(name || ""),
+                color: String(color || ""),
+                weight: typeof weight === "number" ? weight : 0,
+                slug: slugify(name),
+            };
+        })
+        .filter((r) => r.name);
 }
 
 function normalizeVariants(map) {
-    if (!map || typeof map !== 'object') return [];
+    if (!map || typeof map !== "object") return [];
     const out = [];
     const seen = new Set();
     // Enumerate ALL numeric-indexed entries via Object.keys() instead
@@ -40,7 +45,7 @@ function normalizeVariants(map) {
     for (const k of Object.keys(map)) {
         if (/^\d+$/.test(k)) {
             const name = map[k];
-            if (typeof name === 'string' && name.length > 0 && !seen.has(name)) {
+            if (typeof name === "string" && name.length > 0 && !seen.has(name)) {
                 seen.add(name);
                 out.push({ id: parseInt(k, 10), name });
             }
@@ -52,31 +57,32 @@ function normalizeVariants(map) {
 function normalizePetals(items) {
     if (!Array.isArray(items)) return [];
     return items
-        .filter(p => p != null && typeof p === 'object')
+        .filter((p) => p != null && typeof p === "object")
         .map((p, idx) => ({
             id: p.id ?? idx,
-            name: p.name || '',
+            name: p.name || "",
             slug: p.slug || slugify(p.name),
-            desc: p.desc || p.description || '',
+            desc: p.desc || p.description || "",
             size: p.size,
             damage: p.damage,
             health: p.health,
             reload: p.reload,
             cost: p.cost,
-        })).filter(p => p.name);
+        }))
+        .filter((p) => p.name);
 }
 
 function normalizeMobs(items) {
     if (!Array.isArray(items)) return [];
     return items
-        .filter(m => m != null && typeof m === 'object')
+        .filter((m) => m != null && typeof m === "object")
         .map((m, idx) => {
             const snakeHit = detectSnakeProp(m);
             return {
                 id: m.id ?? idx,
-                name: m.name || '',
+                name: m.name || "",
                 slug: m.slug || slugify(m.name),
-                desc: m.desc || m.description || '',
+                desc: m.desc || m.description || "",
                 health: m.health ?? m.maxHealth,
                 damage: m.damage,
                 armor: m.armor,
@@ -85,27 +91,29 @@ function normalizeMobs(items) {
                 snakeProp: snakeHit ? snakeHit.propName : null,
                 snakeCount: snakeHit ? snakeHit.value : null,
             };
-        }).filter(m => m.name);
+        })
+        .filter((m) => m.name);
 }
 
 function normalizeTalents(items) {
     if (!Array.isArray(items)) return [];
     return items
-        .filter(t => t != null && typeof t === 'object')
+        .filter((t) => t != null && typeof t === "object")
         .map((t, idx) => ({
             id: t.id ?? idx,
-            slug: t.slug || '',
+            slug: t.slug || "",
             cost: t.cost,
             value: t.value,
-            parentId: typeof t.parentId === 'number' ? t.parentId : -1,
-        })).filter(t => t.slug);
+            parentId: typeof t.parentId === "number" ? t.parentId : -1,
+        }))
+        .filter((t) => t.slug);
 }
 
 function normalizeBiomeMobs(map) {
-    if (!map || typeof map !== 'object' || Array.isArray(map)) return {};
+    if (!map || typeof map !== "object" || Array.isArray(map)) return {};
     const result = {};
     for (const [biome, mobSet] of Object.entries(map)) {
-        if (mobSet && typeof mobSet === 'object' && !Array.isArray(mobSet)) {
+        if (mobSet && typeof mobSet === "object" && !Array.isArray(mobSet)) {
             result[biome] = Object.keys(mobSet);
         }
     }
@@ -158,53 +166,61 @@ function normalizeServerList(astNode, txResolver, callResolver) {
 
     let best = null; // pick the tabs literal with the most biomes
     const walk = (node) => {
-        if (!node || typeof node !== 'object') return;
-        if (Array.isArray(node)) { for (const x of node) walk(x); return; }
-        if (node.type === 'ArrayExpression' && node.elements.length === 2) {
+        if (!node || typeof node !== "object") return;
+        if (Array.isArray(node)) {
+            for (const x of node) walk(x);
+            return;
+        }
+        if (node.type === "ArrayExpression" && node.elements.length === 2) {
             const [a, b] = node.elements;
             if (!a || !b) return;
-            if (a.type !== 'ObjectExpression' || b.type !== 'ObjectExpression') return;
+            if (a.type !== "ObjectExpression" || b.type !== "ObjectExpression") return;
             // First tab: must have one ArrayExpression prop with >=2 string literals
-            const tab0ArrProps = a.properties.filter(p =>
-                p.value && p.value.type === 'ArrayExpression'
-                && p.value.elements.length >= 2
-                && p.value.elements.every(e => e && e.type === 'Literal' && typeof e.value === 'string'));
+            const tab0ArrProps = a.properties.filter(
+                (p) =>
+                    p.value &&
+                    p.value.type === "ArrayExpression" &&
+                    p.value.elements.length >= 2 &&
+                    p.value.elements.every((e) => e && e.type === "Literal" && typeof e.value === "string")
+            );
             if (tab0ArrProps.length !== 1) return;
             // Second tab: must have a biome prop (ArrayExpression-of-literals OR
             // Identifier resolvable via txResolver) AND a separate color prop
             // (ArrayExpression of hex strings, or ArrayExpression of
             // `CallExpression(Identifier)` resolvable via callResolver, or
             // Identifier resolvable via callResolver returning an array).
-            const tab1BiomeProps = b.properties.filter(p => {
+            const tab1BiomeProps = b.properties.filter((p) => {
                 if (!p.value) return false;
-                if (p.value.type === 'Identifier') {
-                    return txResolver.has(p.value.name)
-                        || callResolver.has(p.value.name);
+                if (p.value.type === "Identifier") {
+                    return txResolver.has(p.value.name) || callResolver.has(p.value.name);
                 }
-                if (p.value.type === 'ArrayExpression') {
-                    return p.value.elements.every(e =>
-                        e && e.type === 'Literal' && typeof e.value === 'string');
+                if (p.value.type === "ArrayExpression") {
+                    return p.value.elements.every((e) => e && e.type === "Literal" && typeof e.value === "string");
                 }
                 return false;
             });
-            const tab1ColorProps = b.properties.filter(p => {
+            const tab1ColorProps = b.properties.filter((p) => {
                 if (!p.value) return false;
-                if (p.value.type === 'Identifier') {
+                if (p.value.type === "Identifier") {
                     const v = callResolver.get(p.value.name);
                     return Array.isArray(v) && v.length >= 5;
                 }
-                if (p.value.type !== 'ArrayExpression') return false;
+                if (p.value.type !== "ArrayExpression") return false;
                 if (p.value.elements.length < 5) return false;
-                return p.value.elements.every(e => {
+                return p.value.elements.every((e) => {
                     if (!e) return false;
-                    if (e.type === 'Literal' && typeof e.value === 'string'
-                        && /^#[0-9a-f]{6}$/i.test(e.value)) return true;
-                    if (e.type === 'CallExpression'
-                        && e.callee && e.callee.type === 'Identifier'
-                        && callResolver.has(e.callee.name)
-                        && e.arguments.length === 1
-                        && e.arguments[0].type === 'Literal'
-                        && typeof e.arguments[0].value === 'number') return true;
+                    if (e.type === "Literal" && typeof e.value === "string" && /^#[0-9a-f]{6}$/i.test(e.value))
+                        return true;
+                    if (
+                        e.type === "CallExpression" &&
+                        e.callee &&
+                        e.callee.type === "Identifier" &&
+                        callResolver.has(e.callee.name) &&
+                        e.arguments.length === 1 &&
+                        e.arguments[0].type === "Literal" &&
+                        typeof e.arguments[0].value === "number"
+                    )
+                        return true;
                     return false;
                 });
             });
@@ -216,20 +232,33 @@ function normalizeServerList(astNode, txResolver, callResolver) {
             // Score: prefer the one with more biomes
             const tab1BiomeProp = tab1BiomeProps[0];
             let biomeCount = 0;
-            if (tab1BiomeProp.value.type === 'ArrayExpression') {
+            if (tab1BiomeProp.value.type === "ArrayExpression") {
                 biomeCount = tab1BiomeProp.value.elements.length;
-            } else if (tab1BiomeProp.value.type === 'Identifier' && txResolver) {
+            } else if (tab1BiomeProp.value.type === "Identifier" && txResolver) {
                 const arr = txResolver.get(tab1BiomeProp.value.name);
                 if (Array.isArray(arr)) biomeCount = arr.length;
             }
             if (!best || biomeCount > best.biomeCount) {
-                best = { tab0Prop: tab0ArrProps[0], tab1BiomeProp, tab1ColorProp: tab1ColorProps[0],
-                         biomeCount, funcName };
+                best = {
+                    tab0Prop: tab0ArrProps[0],
+                    tab1BiomeProp,
+                    tab1ColorProp: tab1ColorProps[0],
+                    biomeCount,
+                    funcName,
+                };
             }
         }
         for (const k of Object.keys(node)) {
-            if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                || k === 'range' || k === 'raw' || k === 'comments') continue;
+            if (
+                k === "loc" ||
+                k === "start" ||
+                k === "end" ||
+                k === "type" ||
+                k === "range" ||
+                k === "raw" ||
+                k === "comments"
+            )
+                continue;
             walk(node[k]);
         }
     };
@@ -241,40 +270,43 @@ function normalizeServerList(astNode, txResolver, callResolver) {
 
     // Regions
     const regionNames = best.tab0Prop.value.elements
-        .map(e => e && e.type === 'Literal' && typeof e.value === 'string' ? e.value : null)
-        .filter(n => n);
+        .map((e) => (e && e.type === "Literal" && typeof e.value === "string" ? e.value : null))
+        .filter((n) => n);
     const regions = regionNames.map((name, i) => ({ id: i, name, slug: slugify(name) }));
 
     // Biomes
     let biomeNames = [];
     const bv = best.tab1BiomeProp.value;
-    if (bv.type === 'ArrayExpression') {
+    if (bv.type === "ArrayExpression") {
         biomeNames = bv.elements
-            .map(e => e && e.type === 'Literal' && typeof e.value === 'string' ? e.value : null)
-            .filter(n => n);
-    } else if (bv.type === 'Identifier' && txResolver.has(bv.name)) {
+            .map((e) => (e && e.type === "Literal" && typeof e.value === "string" ? e.value : null))
+            .filter((n) => n);
+    } else if (bv.type === "Identifier" && txResolver.has(bv.name)) {
         const arr = txResolver.get(bv.name);
-        if (Array.isArray(arr)) biomeNames = arr.filter(n => typeof n === 'string');
+        if (Array.isArray(arr)) biomeNames = arr.filter((n) => typeof n === "string");
     }
 
     // Colors
     let colors = [];
     const cv = best.tab1ColorProp.value;
-    if (cv.type === 'ArrayExpression') {
+    if (cv.type === "ArrayExpression") {
         for (const e of cv.elements) {
             if (!e) continue;
-            if (e.type === 'Literal' && typeof e.value === 'string') {
+            if (e.type === "Literal" && typeof e.value === "string") {
                 colors.push(e.value);
-            } else if (e.type === 'CallExpression'
-                && e.callee && e.callee.type === 'Identifier'
-                && callResolver.has(e.callee.name)
-                && e.arguments.length === 1
-                && e.arguments[0].type === 'Literal'
-                && typeof e.arguments[0].value === 'number') {
+            } else if (
+                e.type === "CallExpression" &&
+                e.callee &&
+                e.callee.type === "Identifier" &&
+                callResolver.has(e.callee.name) &&
+                e.arguments.length === 1 &&
+                e.arguments[0].type === "Literal" &&
+                typeof e.arguments[0].value === "number"
+            ) {
                 try {
                     const fn = callResolver.get(e.callee.name);
                     const result = fn(e.arguments[0].value);
-                    if (typeof result === 'string') colors.push(result);
+                    if (typeof result === "string") colors.push(result);
                     else colors.push(null);
                 } catch (_) {
                     colors.push(null);
@@ -283,18 +315,17 @@ function normalizeServerList(astNode, txResolver, callResolver) {
                 colors.push(null);
             }
         }
-    } else if (cv.type === 'Identifier' && callResolver.has(cv.name)) {
+    } else if (cv.type === "Identifier" && callResolver.has(cv.name)) {
         const arr = callResolver.get(cv.name);
         if (Array.isArray(arr)) colors = arr.slice();
     }
 
-    const biomes = biomeNames
-        .map((name, i) => ({
-            id: i,
-            name,
-            slug: slugify(name),
-            color: colors[i] || null,
-        }));
+    const biomes = biomeNames.map((name, i) => ({
+        id: i,
+        name,
+        slug: slugify(name),
+        color: colors[i] || null,
+    }));
 
     return { regions, biomes, functionName: best.funcName };
 }
@@ -308,12 +339,23 @@ function _buildParentMap(root) {
     if (_parentMapCache.has(root)) return _parentMapCache.get(root);
     const map = new Map();
     const walk = (node, parent) => {
-        if (!node || typeof node !== 'object') return;
+        if (!node || typeof node !== "object") return;
         map.set(node, parent);
-        if (Array.isArray(node)) { for (const x of node) walk(x, node); return; }
+        if (Array.isArray(node)) {
+            for (const x of node) walk(x, node);
+            return;
+        }
         for (const k of Object.keys(node)) {
-            if (k === 'loc' || k === 'start' || k === 'end' || k === 'type'
-                || k === 'range' || k === 'raw' || k === 'comments') continue;
+            if (
+                k === "loc" ||
+                k === "start" ||
+                k === "end" ||
+                k === "type" ||
+                k === "range" ||
+                k === "raw" ||
+                k === "comments"
+            )
+                continue;
             walk(node[k], node);
         }
     };
@@ -327,7 +369,7 @@ function _findEnclosingFunctionName(root, target) {
     while (n) {
         const p = map.get(n);
         if (!p) return null;
-        if (p.type === 'FunctionDeclaration' && p.id && p.id.name) return p.id.name;
+        if (p.type === "FunctionDeclaration" && p.id && p.id.name) return p.id.name;
         n = p;
     }
     return null;

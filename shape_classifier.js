@@ -21,18 +21,23 @@
  * can't be mocked safely in the sandbox.
  */
 const SNAKE_PROP_NAMES = [
-    'snakeCount', 'snakeBodyCount', 'bodyPartCount', 'segmentCount',
-    'segments', 'bodyParts', 'serpentLength',
+    "snakeCount",
+    "snakeBodyCount",
+    "bodyPartCount",
+    "segmentCount",
+    "segments",
+    "bodyParts",
+    "serpentLength",
 ];
 
 function isVariantMap(obj) {
-    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return false;
     // Count numeric-indexed string entries via Object.keys() instead
     // of relying on obj.length which may be stale (e.g. the game adds
     // entries post-construction without updating .length).
     let count = 0;
     for (const k of Object.keys(obj)) {
-        if (/^\d+$/.test(k) && typeof obj[k] === 'string') count++;
+        if (/^\d+$/.test(k) && typeof obj[k] === "string") count++;
     }
     return count >= 15;
 }
@@ -41,20 +46,20 @@ function isRarityTupleArray(items) {
     if (!Array.isArray(items) || items.length < 3 || items.length > 30) return false;
     const first = items[0];
     if (!Array.isArray(first) || first.length < 3) return false;
-    if (typeof first[0] !== 'string') return false;
-    if (typeof first[1] !== 'string' || !/^#[0-9a-f]{6}$/i.test(first[1])) return false;
-    if (typeof first[2] !== 'number') return false;
+    if (typeof first[0] !== "string") return false;
+    if (typeof first[1] !== "string" || !/^#[0-9a-f]{6}$/i.test(first[1])) return false;
+    if (typeof first[2] !== "number") return false;
     return true;
 }
 
 function isPetalArray(items) {
     if (!Array.isArray(items) || items.length < 50) return false;
     const first = items[0];
-    if (!first || typeof first !== 'object' || Array.isArray(first)) return false;
+    if (!first || typeof first !== "object" || Array.isArray(first)) return false;
     // Petal: has name (string) and desc (string). No maxHealth (obfuscated
     // to single char) and no "egg" (mob-specific).
-    if (typeof first.name !== 'string') return false;
-    if (typeof first.desc !== 'string' && typeof first.description !== 'string') return false;
+    if (typeof first.name !== "string") return false;
+    if (typeof first.desc !== "string" && typeof first.description !== "string") return false;
     if (first.egg) return false;
     return true;
 }
@@ -62,23 +67,23 @@ function isPetalArray(items) {
 function isMobArray(items) {
     if (!Array.isArray(items) || items.length < 10) return false;
     const first = items[0];
-    if (!first || typeof first !== 'object' || Array.isArray(first)) return false;
-    if (typeof first.name !== 'string') return false;
-    if (!('health' in first) && !('maxHealth' in first)) return false;
+    if (!first || typeof first !== "object" || Array.isArray(first)) return false;
+    if (typeof first.name !== "string") return false;
+    if (!("health" in first) && !("maxHealth" in first)) return false;
     if (first.desc === undefined && first.description === undefined) return false;
     return true;
 }
 
 function isBiomeMobMap(obj) {
-    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return false;
     const keys = Object.keys(obj);
     if (keys.length < 3) return false;
     for (const k of keys) {
         const v = obj[k];
-        if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+        if (!v || typeof v !== "object" || Array.isArray(v)) return false;
         const vKeys = Object.keys(v);
         if (vKeys.length < 3) return false;
-        if (!vKeys.every(vk => typeof v[vk] === 'number')) return false;
+        if (!vKeys.every((vk) => typeof v[vk] === "number")) return false;
     }
     return true;
 }
@@ -93,11 +98,11 @@ function isBiomeMobMap(obj) {
  * @returns {{propName: string, value: number}|null}
  */
 function detectSnakeProp(mob) {
-    if (!mob || typeof mob !== 'object') return null;
+    if (!mob || typeof mob !== "object") return null;
     for (const name of SNAKE_PROP_NAMES) {
         if (!(name in mob)) continue;
         const v = mob[name];
-        if (typeof v === 'number' && v > 0) {
+        if (typeof v === "number" && v > 0) {
             return { propName: name, value: v };
         }
     }
@@ -112,19 +117,19 @@ function detectSnakeProp(mob) {
 function classify(value) {
     if (value == null) return null;
     if (isVariantMap(value)) {
-        return { kind: 'variant', items: value };
+        return { kind: "variant", items: value };
     }
     if (isRarityTupleArray(value)) {
-        return { kind: 'rarity', items: value };
+        return { kind: "rarity", items: value };
     }
     if (isPetalArray(value)) {
-        return { kind: 'petal', items: value };
+        return { kind: "petal", items: value };
     }
     if (isMobArray(value)) {
-        return { kind: 'mob', items: value };
+        return { kind: "mob", items: value };
     }
     if (isBiomeMobMap(value)) {
-        return { kind: 'biomeMobs', items: value };
+        return { kind: "biomeMobs", items: value };
     }
     return null;
 }

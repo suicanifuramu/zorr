@@ -1,7 +1,7 @@
-const { getOrComputeExtraction } = require('./extraction_pipeline');
+const { getOrComputeExtraction } = require("./extraction_pipeline");
 
 (async () => {
-    console.log('[extract_data] Fetching + VM execution...');
+    console.log("[extract_data] Fetching + VM execution...");
     const result = await getOrComputeExtraction({ includeProtocol: true });
     console.log(`protocolVersion: ${result.protocolVersion}`);
     console.log(`vmRunMs: ${result.vmRunMs}ms`);
@@ -13,7 +13,7 @@ const { getOrComputeExtraction } = require('./extraction_pipeline');
     console.log(`regions: ${result.regions.length}`);
     console.log(`snakeMobIndices: ${result.snakeMobIndices.length}`);
     console.log(`jsUrl: ${result.jsUrl}`);
-})().catch(e => {
-    console.error('[extract_data] Failed:', e.message);
+})().catch((e) => {
+    console.error("[extract_data] Failed:", e.message);
     process.exit(1);
 });
