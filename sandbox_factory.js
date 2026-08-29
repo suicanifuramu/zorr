@@ -29,16 +29,23 @@ import { TextDecoder, TextEncoder } from "node:util";
  * @returns {{
  *   sandbox: Object,
  *   ctx: vm.Context,
- *   MockWebSocket: typeof MockWebSocket,
+ *   MockWebSocket: Function,
  *   runScript: (src: string, opts?: Object) => void,
  *   captureFromGlobal: (key: string) => any,
+ *   cleanup: () => void,
+ *   cleanupPartial: (socketName?: string) => void,
  * }}
  */
 function createZorrSandbox(options = {}) {
     const hooks = options.hooks || {};
 
+    /**
+     * Mock of the game's WebSocket class. Auto-fires onopen asynchronously;
+     * dispatch() simulates incoming game frames via onmessage.
+     */
     class MockWebSocket {
         constructor(url) {
+            /** @type {string} */
             this.url = url;
             this.readyState = 1;
             this.binaryType = "arraybuffer";
@@ -46,8 +53,8 @@ function createZorrSandbox(options = {}) {
             setTimeout(() => {
                 let onopenSucceeded = false;
                 try {
-                    if (typeof this.onopen === "function") {
-                        this.onopen({ target: this, currentTarget: this });
+                    if (typeof (/** @type {any} */ (this).onopen) === "function") {
+                        /** @type {any} */ (this).onopen({ target: this, currentTarget: this });
                     }
                     onopenSucceeded = true;
                 } catch (_) {

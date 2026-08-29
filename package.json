@@ -11,7 +11,8 @@
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
     },
     "dependencies": {
         "acorn": "^8.14.0",
@@ -28,8 +29,10 @@
     },
     "private": true,
     "devDependencies": {
+        "@types/node": "^26.4.0",
         "eslint": "^9.39.5",
         "eslint-config-prettier": "^10.1.8",
-        "prettier": "^3.9.6"
+        "prettier": "^3.9.6",
+        "typescript": "^7.0.2"
     }
 }

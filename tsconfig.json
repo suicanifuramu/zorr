@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "noEmit": true,
+        "allowJs": true,
+        "checkJs": true,
+        "target": "es2023",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "strict": false,
+        "noImplicitThis": true,
+        "skipLibCheck": true,
+        "types": ["node"],
+        "maxNodeModuleJsDepth": 0
+    },
+    "include": ["*.js", "pathfinding/*.js", "test/**/*.js"],
+    "exclude": ["node_modules", "zorr-deobfuscator", "pathfinding/pathfinding-browser.min.js", "scripts"]
+}

@@ -602,7 +602,7 @@ class BotSession {
             wsOptions.agent = this.proxyAgent;
             console.log(`${tag} [Bot] Using proxy: ${this.proxyUrl}`);
         }
-        this.ws = new WebSocket(this.serverUrl, wsOptions);
+        this.ws = new WebSocket(this.serverUrl, /** @type {any} */ (wsOptions));
         this.ws.on("open", () => {
             this._sendHandshake();
         });
@@ -1082,6 +1082,8 @@ class BotSession {
         const baseUrl = serverUrl || MAP_SERVER_URL;
         const url = new URL("/control-stream", baseUrl);
         url.searchParams.set("accountId", this.accountId);
+        /** @type {BotSession} */
+        const bot = this;
         const req = http.request(
             {
                 hostname: url.hostname,
@@ -1091,14 +1093,15 @@ class BotSession {
                 agent: false,
                 headers: { Accept: "text/event-stream", "Cache-Control": "no-store", Connection: "keep-alive" },
             },
+            /** @param {import("http").IncomingMessage} res */
             (res) => {
                 if (res.statusCode !== 200) {
                     res.resume();
-                    this._onStreamClosed(false);
+                    bot._onStreamClosed();
                     return;
                 }
-                this._controlStreamConnected = true;
-                this._controlStreamBackoffMs = _CONTROL_BACKOFF_INITIAL_MS;
+                bot._controlStreamConnected = true;
+                bot._controlStreamBackoffMs = _CONTROL_BACKOFF_INITIAL_MS;
                 let buffer = "",
                     currentEvent = "message",
                     cleanupDone = false;
@@ -1106,8 +1109,8 @@ class BotSession {
                     if (cleanupDone) return;
                     cleanupDone = true;
                     this._controlStreamConnected = false;
-                    if (this._controlStreamReq === req) this._controlStreamReq = null;
-                    this._scheduleControlReconnect();
+                    if (bot._controlStreamReq === req) bot._controlStreamReq = null;
+                    bot._scheduleControlReconnect();
                 };
                 res.setEncoding("utf8");
                 res.on("data", (chunk) => {
@@ -1124,7 +1127,7 @@ class BotSession {
                         }
                         if (dataLines.length === 0) continue;
                         try {
-                            this._handleControlEvent(currentEvent, JSON.parse(dataLines.join("\n")));
+                            bot._handleControlEvent(currentEvent, JSON.parse(dataLines.join("\n")));
                         } catch (e) {}
                     }
                 });
@@ -2489,7 +2492,8 @@ class BotSession {
             });
     }
     _fetchRoutes() {
-        return new Promise((resolve, reject) => {
+        /** @type {Promise<void>} */
+        const p = new Promise((resolve, reject) => {
             http.get("http://localhost:3000/routes", (res) => {
                 let body = "";
                 res.on("data", (c) => (body += c));
@@ -2503,6 +2507,7 @@ class BotSession {
                 });
             }).on("error", reject);
         });
+        return p;
     }
     apAdvance() {
         if (!this._AP.active) return;
@@ -2735,7 +2740,7 @@ class BotSession {
             _drawText57(px, size, label, mx, my - 10 - 7, [0xff, 0xd7, 0x00]);
         if (!_drawTtfText(px, size, size, `[${gridX},${gridY}]`, mx, my + 10 + 12, 18, [0xff, 0xd7, 0x00]))
             _drawText57(px, size, `[${gridX},${gridY}]`, mx, my + 10, [0xff, 0xd7, 0x00]);
-        return PNG.sync.write(png);
+        return /** @type {any} */ (PNG).sync.write(png);
     }
     _sendDiscordAlert(mob) {
         const _tag = `[${this.accountId.slice(0, 8)}]`;

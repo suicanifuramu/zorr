@@ -54,6 +54,7 @@ function isSnakeSlug(slug) {
  *   variants: Array,
  *   petals: Array,
  *   mobs: Array,
+ *   talents: Array,
  *   regions: Array<{id, name, slug}>,
  *   biomes: Array<{id, name, slug, color}>,
  *   snakeMobIndices: number[],

@@ -103,7 +103,7 @@ function _ensureUrlCheckTimer() {
 
 /**
  * Return a snapshot of the current cache state (for diagnostics / /config/refresh etc.).
- * @returns {{cached: boolean, jsUrl: string|null, age: number, lastCheck: number, lastChange: number, diskCached: boolean}}
+ * @returns {{cached: boolean, jsUrl: string|null, fetchedAt: string|null, age: number, lastCheck: number, lastChange: number, diskCached: boolean, diskPath: string}}
  */
 function getCacheStatus() {
     return {
@@ -754,6 +754,10 @@ async function _waitForHandshake(getState, { includeProtocol, handshakeMaxWaitMs
  *   variants: Array,
  *   petals: Array,
  *   mobs: Array,
+ *   talents: Array,
+ *   biomeMobs: Object,
+ *   regions: Array,
+ *   biomes: Array,
  *   snakeMobIndices: number[],
  *   snakeMethod: string,
  *   vmRunMs: number,
@@ -1012,7 +1016,11 @@ async function runFullExtraction({
  * @param {boolean} [options.skipUrlCheck=false]  skip the URL-change probe
  * @param {boolean} [options.includeSource=false]  include raw source string in result
  * @param {boolean} [options.skipDiskCache=false]  skip the on-disk cache
- * @returns {Promise<object>}
+ * @param {number} [options.timeout=30000]  VM stage timeout (ms)
+ * @param {number} [options.retries=2]  fetch retry count
+ * @param {boolean} [options.includeProtocol=true]  wait for handshake (protocol version)
+ * @param {number} [options.handshakeMaxWaitMs=3000]  handshake wait cap (ms)
+ * @returns {Promise<{source: string, jsUrl: string, htmlUrl: string, protocolVersion: number, rarities: Array, variants: Array, petals: Array, mobs: Array, talents: Array, biomeMobs: Object, regions: Array, biomes: Array, snakeMobIndices: number[], snakeMethod: string, vmRunMs: number, fetchedAt: string}>}
  */
 async function getOrComputeExtraction(options = {}) {
     const {
