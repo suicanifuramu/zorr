@@ -15,7 +15,9 @@ const MIME = {
 
 http.createServer((req, res) => {
     const urlPath = decodeURIComponent(new URL(req.url, "http://x").pathname);
-    const file = path.normalize(path.join(root, urlPath === "/" ? "pathfinding/index.html" : path.join("pathfinding", urlPath)));
+    const file = path.normalize(
+        path.join(root, urlPath === "/" ? "pathfinding/index.html" : path.join("pathfinding", urlPath))
+    );
     if (!file.startsWith(path.join(root, "pathfinding")) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
         res.writeHead(404).end("Not found");
         return;
