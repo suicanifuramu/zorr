@@ -1,22 +1,14 @@
 // run_capture.js — single-account runner (launches one BotSession from
 // accounts.txt) for quick manual testing of login/spawn without running the
 // full account_manager. Usage: node run_capture.js <accountId>
-import "dotenv";
-// .config();
+import "dotenv/config";
 
 import { BotSession } from "./bot_session.js";
 import { extractGameData } from "./game_data_extractor.js";
-import { extractProtocolVersion } from "./protocol_extractor.js";
 
 (async () => {
     const gameData = await extractGameData({ includeSource: false });
-    let protocolVersion = 443;
-    try {
-        const { version } = await extractProtocolVersion();
-        protocolVersion = version;
-    } catch (e) {
-        console.log("[Capture] protocol version fallback:", protocolVersion);
-    }
+    const protocolVersion = gameData.protocolVersion ?? 443;
 
     const petalNames = gameData.petals.map((p) => p.name);
     const slugToId = {};

@@ -205,7 +205,7 @@ function startControlDiscovery() {
 }
 
 // Always extract fresh from zorr.pages.dev at startup.
-// Uses the unified pipeline (shared with protocol_extractor / game_data_extractor).
+// Uses the unified pipeline (shared with game_data_extractor).
 async function refreshConfig() {
     try {
         const full = await getOrComputeExtraction({ includeProtocol: true });

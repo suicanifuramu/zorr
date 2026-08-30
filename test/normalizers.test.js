@@ -21,7 +21,6 @@ import {
     classify,
     SNAKE_PROP_NAMES,
 } from "../shape_classifier.js";
-import { SNAKE_SLUG_PATTERNS, isSnakeSlug } from "../game_data_extractor.js";
 import { extractSnakeIndicesFromRaw } from "../extraction_pipeline.js";
 
 test("slugify lowercases and underscores", () => {
@@ -150,13 +149,6 @@ test("classify routes by shape", () => {
     for (let i = 0; i < 50; i++) petals.push({ id: i, name: "Petal", desc: "d" });
     assert.strictEqual(classify(petals).kind, "petal");
     assert.strictEqual(classify("nope"), null);
-});
-
-test("snake slug patterns match legacy slugs", () => {
-    assert.strictEqual(isSnakeSlug("centipede"), true);
-    assert.strictEqual(isSnakeSlug("rattlesnake"), true);
-    assert.strictEqual(isSnakeSlug("hel_beetle"), false);
-    for (const re of SNAKE_SLUG_PATTERNS) assert.ok(re instanceof RegExp);
 });
 
 test("extractSnakeIndicesFromRaw uses snakeCount on raw mobs", () => {

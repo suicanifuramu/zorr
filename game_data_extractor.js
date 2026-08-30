@@ -3,16 +3,11 @@
  *
  * Public facade for the unified extraction pipeline.
  *
- * The actual fetch + VM + classify work lives in extraction_pipeline.js
- * (shared with protocol_extractor.js). This file provides:
+ * The actual fetch + VM + classify work lives in extraction_pipeline.js. This file provides:
  *   - extractGameData() — the legacy public API, returns the v2 schema
  *   - the v2 schema normalizers (re-exported from normalizers.js)
- *   - SNAKE_SLUG_PATTERNS / isSnakeSlug() — LEGACY, kept for reference
- *     but no longer used by the pipeline. Detection now uses the raw
- *     mob's `snakeCount` property (Phase A verified).
  */
 import { getOrComputeExtraction, runFullExtraction, extractSnakeIndicesFromRaw } from "./extraction_pipeline.js";
-import { detectSnakeProp, SNAKE_PROP_NAMES } from "./shape_classifier.js";
 import {
     slugify,
     normalizeRarities,
@@ -22,18 +17,6 @@ import {
     normalizeTalents,
     computeSnakeIndices,
 } from "./normalizers.js";
-
-// Legacy slug patterns — kept for documentation/legacy callers only.
-// The new pipeline does NOT use these; it uses the raw mob's snakeCount.
-const SNAKE_SLUG_PATTERNS = [/^bush$/i, /^centipede/i, /^worm/i, /^snake/i, /^rattlesnake/i, /^hel_jellyfish/i];
-
-function isSnakeSlug(slug) {
-    if (!slug) return false;
-    for (const re of SNAKE_SLUG_PATTERNS) {
-        if (re.test(slug)) return true;
-    }
-    return false;
-}
 
 // ============================================================================
 // Public API: extractGameData(opts) -> v2 schema
@@ -93,7 +76,3 @@ export { normalizeMobs };
 export { normalizeTalents };
 export { computeSnakeIndices };
 export { slugify };
-export { isSnakeSlug };
-export { SNAKE_SLUG_PATTERNS };
-export { SNAKE_PROP_NAMES };
-export { detectSnakeProp };

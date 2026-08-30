@@ -4,8 +4,7 @@
  * Reusable Node.js VM sandbox for executing Zorr game scripts
  * in a controlled environment. Used by:
  *   - extraction_pipeline.js (capture game data + WebSocket handshake)
- *   - protocol_extractor.js (legacy wrapper, capture WebSocket.send for protocol version)
- *   - game_data_extractor.js (legacy wrapper, capture rarities / variants / petals / mobs)
+ *   - game_data_extractor.js (facade, capture rarities / variants / petals / mobs)
  *
  * The sandbox emulates browser globals via a recursive Proxy so the
  * game code can be executed (mostly) safely. All execution errors
