@@ -2,6 +2,7 @@
 accounts.txt
 zorr-deobfuscated.js
 .extraction_cache.json
+generated/protocol_constants.json
 node_modules
 zorr-deobfuscator
 proxies.txt

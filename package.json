@@ -10,6 +10,7 @@
         "capture": "node run_capture.js",
         "pathfind": "node pathfinding/server.js",
         "extract": "node extract_data.js",
+        "extract:constants": "node scripts/extract-all.mjs",
         "test": "node --test \"test/*.test.js\"",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
