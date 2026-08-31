@@ -218,10 +218,7 @@ async function main() {
         console.log(`[AccountManager] Account ${accountIds[i].id.slice(0, 8)}: ${distributions[i].length} servers`);
     }
 
-    // Create and start BotSessions
-    // Stagger initial connections to avoid tripping the server's
-    // concurrent-connection / challenge (opcode 0x08) logic.
-    const STAGGER_MS = 4000;
+    // Create and start BotSessions — all accounts connect in parallel.
     const sessions = [];
     for (let i = 0; i < distributed.length; i++) {
         const entry = distributed[i];
@@ -236,16 +233,14 @@ async function main() {
         }
         const buildTag = entry.buildNumber ? ` (build${entry.buildNumber})` : "";
         const proxyTag = entry.proxy ? ` [proxy: ${entry.proxy.url}]` : "";
-        setTimeout(() => {
-            console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}${proxyTag}`);
-            session.start(distributions[i]);
-            // Begin auto-patrol immediately using the assigned server distribution.
-            if (distributions[i] && distributions[i].length > 0) {
-                session.apStart();
-            } else {
-                console.log(`[AccountManager] No servers assigned to ${accountId.slice(0, 8)}, auto-patrol skipped`);
-            }
-        }, i * STAGGER_MS);
+        console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}${proxyTag}`);
+        session.start(distributions[i]);
+        // Begin auto-patrol immediately using the assigned server distribution.
+        if (distributions[i] && distributions[i].length > 0) {
+            session.apStart();
+        } else {
+            console.log(`[AccountManager] No servers assigned to ${accountId.slice(0, 8)}, auto-patrol skipped`);
+        }
     }
 
     // Handle graceful shutdown
