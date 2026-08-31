@@ -1169,6 +1169,7 @@ class BotSession {
         const flags = view.getUint16(v);
         v += 2;
         const entity = this.knownEntities.get(entityId);
+        // Flag order and read sizes mirror the game's S.update handler exactly.
         if (flags & UPDATE_FLAGS.POSITION) {
             if (v + 4 > bytes.length) return v;
             const x = decompressCoord(view.getUint16(v));
@@ -1218,13 +1219,14 @@ class BotSession {
             if (v + 2 > bytes.length) return v;
             v += 2;
         }
-        if (flags & UPDATE_FLAGS.LAYER) {
+        // LAYER: 0B payload (client-side toggle) — nothing to skip
+        if (flags & UPDATE_FLAGS.SE) {
             if (v + 1 > bytes.length) return v;
             v += 1;
         }
         if (flags & UPDATE_FLAGS.STATUS) {
             if (v + 4 > bytes.length) return v;
-            const sf = view.getUint32(v);
+            const sf = view.getUint32(v); // sv() bitmask
             v += 4;
             if (entityId === this.botId && this.botStats) {
                 this.botStats.statusFlags = sf;
@@ -1242,13 +1244,12 @@ class BotSession {
         if (flags & UPDATE_FLAGS.FACE) {
             if (v + 3 > bytes.length) return v;
             v += 3;
-        } // y(a): face + mobSkin + aura
-        if (flags & UPDATE_FLAGS.VG) {
+        } // y(): face + mobSkin + aura
+        if (flags & UPDATE_FLAGS.CE) {
             if (v + 1 > bytes.length) return v;
             v += 1;
         }
         if (flags & UPDATE_FLAGS.GUILD) {
-            if (v + 1 > bytes.length) return v;
             const r = readString(view, v);
             v = r.newOffset;
         }
@@ -1257,10 +1258,15 @@ class BotSession {
             const mn = view.getUint8(v++) / 255;
             if (entityId === this.botId && this.botStats) this.botStats.manaPercent = (mn * 100).toFixed(1);
         }
-        if (flags & UPDATE_FLAGS.GE) {
+        if (flags & UPDATE_FLAGS.HE) {
             if (v + 1 > bytes.length) return v;
             v += 1;
         }
+        if (flags & UPDATE_FLAGS.GE) {
+            if (v + 4 > bytes.length) return v;
+            v += 4;
+        }
+        // snake body segments (game: s.Hr loop, 4B per segment)
         if (entity && entity.snakeCount > 0) {
             for (let s = 0; s < entity.snakeCount; s++) {
                 if (v + 4 > bytes.length) return v;
@@ -1279,7 +1285,7 @@ class BotSession {
         if (flags & UPDATE_FLAGS.PE) {
             if (v + 1 > bytes.length) return v;
             const pm = view.getUint8(v++);
-            for (let b = 0; b < 6; b++) {
+            for (let b = 0; b < 8; b++) {
                 if (pm & (1 << b)) {
                     if (v + 4 > bytes.length) return v;
                     v += 4;
@@ -1365,6 +1371,9 @@ class BotSession {
                 if (v + 2 > bytes.length) return v;
                 const pv = view.getUint16(v);
                 v += 2;
+                // game E.H: u16 item + f32 weight/offset (4B) — must skip both
+                if (v + 4 > bytes.length) return v;
+                v += 4;
                 const [pi, ri] = decodeItemValue(pv);
                 this.activePetals.set(entityId, {
                     entityId,

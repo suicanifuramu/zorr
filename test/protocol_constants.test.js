@@ -91,3 +91,47 @@ test("S.update handler flag-layout invariants hold in current source", () => {
     });
     assert.strictEqual(r.status, 0, r.stderr.toString());
 });
+
+test("UPDATE_FLAGS read sizes match the game's S.update handler (desync guard)", async () => {
+    const m = await import("../lib/bot/constants.js");
+    const F = m.UPDATE_FLAGS;
+    const deobfDir = path.join(root, "zorr-deobfuscator", "deobfuscated");
+    const file = fs.readdirSync(deobfDir).find((f) => f.endsWith("-deobfuscated.js"));
+    assert.ok(file, "deobfuscated source missing — run npm run extract:constants");
+    const deo = fs.readFileSync(path.join(deobfDir, file), "utf8");
+    const upd = deo.indexOf("case S.update:");
+    const next = deo.indexOf("case S.", upd + 20);
+    const body = deo.slice(upd, next);
+    // every game flag branch must still be present in the handler body
+    // gameProp -> [botLabel, expectedBit]
+    const flags = {
+        ne: ["POSITION", 1],
+        ae: ["ANGLE", 2],
+        oe: ["SIZE", 4],
+        ie: ["LAYER", 8],
+        se: ["SE", 16],
+        re: ["STATUS", 32],
+        le: ["LEVEL", 64],
+        de: ["FACE", 128],
+        ce: ["CE", 256],
+        me: ["GUILD", 512],
+        Mana: ["MANA", 1024],
+        he: ["HE", 2048],
+        ge: ["GE", 4096],
+        Health: ["HEALTH", 8192],
+        pe: ["PE", 16384],
+    };
+    const re = new RegExp("t & O\\." + "([A-Za-z]+)\\b", "g");
+    const present = new Set();
+    let mm;
+    while ((mm = re.exec(body))) present.add(mm[1]);
+    for (const [name, [label, bit]] of Object.entries(flags)) {
+        assert.ok(
+            present.has(name),
+            `update handler lost flag ${name} (${bit}) — layout changed, re-verify read sizes`
+        );
+        assert.strictEqual(F[label], bit);
+    }
+    // snake body loop & sv() 4B status must exist in the handler
+    assert.ok(body.includes("M = sv(s, x, M)"), "sv() status read missing from update handler");
+});
