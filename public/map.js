@@ -1202,7 +1202,7 @@ function switchServer() {
     fetch("/switch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ region, biome }),
+        body: JSON.stringify({ region, biome, accountId: selectedAccountId || undefined }),
     })
         .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
         .then(() => {

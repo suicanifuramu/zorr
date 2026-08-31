@@ -670,6 +670,12 @@ class BotSession {
             const route = data.route || [];
             if (route.length > 0) this._setRoute(route, "patrol-event");
         } else if (eventName === "command") {
+            if (data.type === "switch") {
+                // Manual server switch from the viewer. switchBotServer handles
+                // _switching re-entry guard internally.
+                this.switchBotServer(data.region, data.biome);
+                return;
+            }
             if (data.action === "title") {
                 if (!this.isDead && !this.respawnState && !this.returnToTitle) {
                     this.isDead = true;

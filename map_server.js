@@ -501,17 +501,31 @@ const server = http.createServer((req, res) => {
                     res.end(JSON.stringify({ ok: false, error: "region and biome required" }));
                     return;
                 }
-                // Clear only the specified account's data
-                const targetId = accountId || "default";
-                const session = botSessions.get(targetId);
-                if (session) {
-                    session.latestData.mobs = null;
-                    session.latestData.map = null;
-                    session.latestData.position = null;
-                    session.latestData["auto-patrol"] = null;
+                // targetId is only a real session id when the viewer selected one.
+                // Never fabricate "default" — that pseudo-id pollutes botSessions
+                // and the viewer's account list.
+                const targetId = accountId || null;
+                if (targetId) {
+                    const session = botSessions.get(targetId);
+                    if (session) {
+                        session.latestData.mobs = null;
+                        session.latestData.map = null;
+                        session.latestData.position = null;
+                        session.latestData["auto-patrol"] = null;
+                    }
+                } else {
+                    // Switching all sessions: clear every connected one
+                    for (const session of botSessions.values()) {
+                        session.latestData.mobs = null;
+                        session.latestData.map = null;
+                        session.latestData.position = null;
+                        session.latestData["auto-patrol"] = null;
+                    }
                 }
-                // Notify all SSE subscribers with accountId
-                const switchEvt = { type: "switch", region, biome, accountId: targetId };
+                // Notify all SSE viewers. Single-account switch carries its id;
+                // global switch has accountId undefined (viewers clear when it
+                // targets them or they have no selection).
+                const switchEvt = { type: "switch", region, biome, ...(targetId ? { accountId: targetId } : {}) };
                 const cSnapshot = clients.slice();
                 for (const client of cSnapshot) {
                     try {
@@ -520,8 +534,9 @@ const server = http.createServer((req, res) => {
                         /* ignore */
                     }
                 }
-                _sendToBots("command", { type: "switch", region, biome }, accountId);
-                console.log(`[MapServer] Queued switch: ${region}/${biome} for ${targetId.slice(0, 8)}`);
+                _sendToBots("command", { type: "switch", region, biome }, targetId);
+                const targetLog = targetId ? targetId.slice(0, 8) : "all";
+                console.log(`[MapServer] Queued switch: ${region}/${biome} for ${targetLog}`);
                 res.writeHead(200, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ ok: true, queued: true, region, biome }));
             } catch (e) {
