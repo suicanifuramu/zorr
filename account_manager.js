@@ -51,6 +51,11 @@ async function loadGameData() {
     const protocolVersion = gameData.protocolVersion ?? 443;
     console.log(`[AccountManager] Protocol version: ${protocolVersion} (from ${gameData.sourceUrl})`);
 
+    // Fail fast if the game updated after the last constants extraction —
+    // stale opcodes would send garbage packets to the live server.
+    const { assertFreshFor } = await import("./lib/bot/constants.js");
+    assertFreshFor(gameData.sourceUrl);
+
     console.log(
         `[AccountManager] Game data loaded: ${petalNames.length} petals, ${mobNames.length} mobs, ${rarities.length} rarities, ${variants.length} variants`
     );

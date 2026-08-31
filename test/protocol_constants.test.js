@@ -62,6 +62,25 @@ test("lib/bot/constants.js loads and exposes expected wire values", () => {
     });
 });
 
+test("constants record the game source URL they were derived from", () => {
+    assert.ok(c._meta.jsUrl, "run `npm run extract:constants` to record the source URL");
+    assert.match(c._meta.jsUrl, /^https:\/\/zorr\.pages\.dev\/[A-Za-z0-9_-]+\.js$/);
+    const base = path.basename(c._meta.jsUrl.split("?")[0]).replace(/\.js$/, "");
+    assert.strictEqual(c._meta.source, `${base}-deobfuscated.js`);
+});
+
+test("assertFreshFor passes for the recorded URL and throws for a stale one", async () => {
+    const m = await import("../lib/bot/constants.js");
+    m.assertFreshFor(c._meta.jsUrl); // must not throw
+    assert.throws(() => m.assertFreshFor("https://zorr.pages.dev/STALE000.js"), /game source updated/);
+    assert.throws(() => m.assertFreshFor(undefined), /no recorded game URL|game source updated/);
+});
+
+test("extracted pinky bitmask matches the sv() _s flag and the live-verified 2048", () => {
+    assert.strictEqual(c.statusFlags[2048], "_s");
+    assert.strictEqual(c.pinkyBitmask, 2048);
+});
+
 test("S.update handler flag-layout invariants hold in current source", () => {
     const deobfDir = path.join(root, "zorr-deobfuscator", "deobfuscated");
     const file = fs.readdirSync(deobfDir).find((f) => f.endsWith("-deobfuscated.js"));

@@ -20,14 +20,37 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const deobfDir = path.join(root, "zorr-deobfuscator", "deobfuscated");
 
-const deobfFile = fs
-    .readdirSync(deobfDir)
-    .filter((f) => f.endsWith("-deobfuscated.js"))
-    .map((f) => ({ f, m: fs.statSync(path.join(deobfDir, f)).mtimeMs }))
-    .sort((a, b) => b.m - a.m)[0];
-if (!deobfFile) {
+// --js-url <url>: pick the deobfuscated output matching the CURRENT live game source
+// (its file name embeds the JS base name, e.g. 1K161E3QM). When given and no matching
+// output exists, we fail — the game updated and the deobfuscator must re-run first
+// (extract-all.mjs handles that automatically).
+let expectBase = null;
+const jsUrlArgIdx = process.argv.indexOf("--js-url");
+if (jsUrlArgIdx !== -1 && process.argv[jsUrlArgIdx + 1]) {
+    expectBase = path.basename(process.argv[jsUrlArgIdx + 1].split("?")[0]).replace(/\.js$/, "");
+}
+
+const deobfFiles = fs.readdirSync(deobfDir).filter((f) => f.endsWith("-deobfuscated.js"));
+if (deobfFiles.length === 0) {
     console.error("[constants] deobfuscated source not found. Run: node zorr-deobfuscator/main.js");
     process.exit(1);
+}
+let deobfFile;
+if (expectBase) {
+    const wanted = `${expectBase}-deobfuscated.js`;
+    if (!deobfFiles.includes(wanted)) {
+        console.error(
+            `[constants] game source updated: current URL base "${expectBase}" has no ` +
+                `deobfuscated output (have: ${deobfFiles.join(", ")}). ` +
+                `Re-run \`npm run extract:constants\` which regenerates it via the deobfuscator.`
+        );
+        process.exit(1);
+    }
+    deobfFile = { f: wanted };
+} else {
+    deobfFile = deobfFiles
+        .map((f) => ({ f, m: fs.statSync(path.join(deobfDir, f)).mtimeMs }))
+        .sort((a, b) => b.m - a.m)[0];
 }
 const srcPath = path.join(deobfDir, deobfFile.f);
 const src = fs.readFileSync(srcPath, "utf8");
@@ -172,7 +195,13 @@ const PINKY_BITMASK_EXTRACTED = Number(Object.keys(statusFlags).find((k) => stat
 
 // ── build the full constants payload ──
 const out = {
-    _meta: { source: path.basename(srcPath), extractedAt: new Date().toISOString() },
+    _meta: {
+        source: path.basename(srcPath),
+        // jsUrl tied to the deobfuscated output's base name, so consumers can
+        // detect that the constants belong to the currently live game source.
+        jsUrl: expectBase ? process.argv[jsUrlArgIdx + 1] : null,
+        extractedAt: new Date().toISOString(),
+    },
     // S split into recv/send opcode tables by their N-block of origin:
     //   block1 (recv, server→client): Ie=0 KICK, Fe=1 LOBBY, update=3 ENTITY_UPDATE, ...
     //   block2 (send, client→server): Un=0..fi — wired straight to tO()/tP() send sites.

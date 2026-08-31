@@ -5,10 +5,13 @@ import "dotenv/config";
 
 import { BotSession } from "./bot_session.js";
 import { extractGameData } from "./game_data_extractor.js";
+import { PINKY_BITMASK, assertFreshFor } from "./lib/bot/constants.js";
 
 (async () => {
     const gameData = await extractGameData({ includeSource: false });
     const protocolVersion = gameData.protocolVersion ?? 443;
+    // Fail fast if the game updated since the last constants extraction.
+    assertFreshFor(gameData.sourceUrl);
 
     const petalNames = gameData.petals.map((p) => p.name);
     const slugToId = {};
@@ -29,7 +32,7 @@ import { extractGameData } from "./game_data_extractor.js";
         snakeMobIndices,
         rarities,
         variants,
-        PINKY_BITMASK: 2048,
+        PINKY_BITMASK,
         protocolVersion,
     };
 

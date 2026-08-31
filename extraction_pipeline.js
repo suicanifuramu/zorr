@@ -85,10 +85,13 @@ function _ensureUrlCheckTimer() {
             const currentUrl = res.jsUrl;
             if (currentUrl !== _lastJsUrl) {
                 _logUrlChange(_lastJsUrl, currentUrl);
-                // Invalidate the cache; the next getOrComputeExtraction
-                // call (if any) will see a cache miss and re-extract.
+                // Invalidate ALL cache layers. The disk cache must go too —
+                // otherwise the next getOrComputeExtraction re-accepts the
+                // stale disk entry (its acceptance check passes when
+                // _lastJsUrl is null) and the process never re-extracts.
                 _cached = null;
                 _lastJsUrl = null;
+                cacheStore.clearCache();
             }
         } catch (e) {
             // Network blip: keep the cached value, retry next tick
@@ -460,13 +463,25 @@ async function getOrComputeExtraction(options = {}) {
     if (!skipDiskCache && !includeSource) {
         const disk = cacheStore.loadCache();
         if (disk) {
-            // Validate the disk cache against the current known jsUrl
-            // (if we have one from a prior run). If they differ, treat
-            // the disk cache as stale and re-extract.
-            const matches = !_lastJsUrl || disk.jsUrl === _lastJsUrl;
+            // Validate the disk cache against the current known jsUrl. When
+            // _lastJsUrl is null (fresh process), the URL is verified with a
+            // single cheap HTML check before accepting — a stale disk cache
+            // from a previous run must not mask a game update. On network
+            // failure the disk cache is still accepted (best effort).
+            let matches = !_lastJsUrl || disk.jsUrl === _lastJsUrl;
+            if (matches && !_lastJsUrl && !skipUrlCheck) {
+                try {
+                    const live = await fetchJsUrlFromHtml();
+                    if (live.jsUrl !== disk.jsUrl) {
+                        _logUrlChange(disk.jsUrl, live.jsUrl);
+                        matches = false;
+                        _lastJsUrl = live.jsUrl; // remember so later checks compare correctly
+                    }
+                } catch (_) {
+                    /* network blip: accept disk cache as before */
+                }
+            }
             if (matches) {
-                // Sanity: also verify the URL via a single HTML check
-                // before accepting the disk cache (best effort).
                 _cached = {
                     result: { ...disk, source: "" },
                     expiresAt: ttlMs === Infinity ? Infinity : Date.now() + ttlMs,
