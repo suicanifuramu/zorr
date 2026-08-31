@@ -6,13 +6,17 @@
     "type": "module",
     "scripts": {
         "start": "node map_server.js",
+        "bot": "node account_manager.js",
+        "capture": "node run_capture.js",
         "pathfind": "node pathfinding/server.js",
+        "extract": "node extract_data.js",
         "test": "node --test \"test/*.test.js\"",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "check": "npm run lint && npm run typecheck && npm run format:check && npm test"
     },
     "dependencies": {
         "acorn": "^8.14.0",
