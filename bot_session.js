@@ -1618,8 +1618,15 @@ class BotSession {
     _sendDiscordAlert(..._) {}
 }
 
-// Runtime mix-in replaces the stub declarations above.
-Object.assign(BotSession.prototype, BotNavigable, BotAutopatrol, BotRenderable);
+// Runtime mix-in replaces the stub declarations above. Class prototypes hold
+// non-enumerable methods, so copy descriptors explicitly (Object.assign would skip them).
+for (const mixin of [BotNavigable, BotAutopatrol, BotRenderable]) {
+    for (const name of Object.getOwnPropertyNames(mixin)) {
+        if (name === "constructor") continue;
+        const desc = Object.getOwnPropertyDescriptor(mixin, name);
+        if (desc) Object.defineProperty(BotSession.prototype, name, desc);
+    }
+}
 
 // Mix in extracted method groups (navigation, auto-patrol, rendering/discord).
 // Re-exports for back-compat (tests import these from bot_session.js).
