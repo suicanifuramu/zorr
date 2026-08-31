@@ -2,10 +2,24 @@ import http from "node:http";
 import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
-import dgram from "node:dgram";
 import { getOrComputeExtraction, invalidateCache } from "./extraction_pipeline.js";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
+import {
+    customRoutes,
+    trackingConfig,
+    pingRules,
+    biomeChannels,
+    saveRoutes,
+    saveTrackingConfig,
+    savePingRules,
+    saveBiomeChannels,
+    pushTrackingConfigToBot,
+    pushPingRulesToBot,
+    pushBiomeChannelsToBot,
+    initStore,
+} from "./lib/server/store.js";
+import { startControlDiscovery } from "./lib/server/discovery.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load .env for DISCORD_WEBHOOK_URL
@@ -16,7 +30,6 @@ try {
 }
 
 const PORT = 3000;
-const CONTROL_DISCOVERY_PORT = 41235; // UDP port for "I'm here" broadcast to bot
 let latestData = { config: null }; // Global: only config is shared
 let clients = [];
 const commandQueues = new Map(); // Map<accountId, Array<{action,...}>>
@@ -29,121 +42,6 @@ let controlDiscoverySocket = null; // UDP socket for broadcasting presence to bo
 let controlDiscoveryInterval = null; // 3s heartbeat interval
 const _loggedTypes = new Set(); // dedupe: log first /mapdata per type, then silent
 let _loggedDeadClient = false; // dedupe: log first dead SSE client, then silent
-
-// Routes storage
-const ROUTES_PATH = path.join(__dirname, "routes.json");
-let customRoutes = {};
-try {
-    if (fs.existsSync(ROUTES_PATH)) {
-        const raw = fs.readFileSync(ROUTES_PATH, "utf8").replace(/^\uFEFF/, "");
-        customRoutes = JSON.parse(raw);
-        console.log(`[MapServer] Loaded ${Object.keys(customRoutes).length} routes`);
-    }
-} catch (e) {
-    /* ignore */
-}
-
-function saveRoutes() {
-    try {
-        fs.writeFileSync(ROUTES_PATH, JSON.stringify(customRoutes, null, 2));
-    } catch (e) {
-        /* ignore */
-    }
-}
-
-// Tracking config (targets + webhook URL)
-const TRACKING_CONFIG_PATH = path.join(__dirname, "tracking_config.json");
-let trackingConfig = { targets: [] };
-try {
-    if (fs.existsSync(TRACKING_CONFIG_PATH)) {
-        const rawCfg = fs.readFileSync(TRACKING_CONFIG_PATH, "utf8").replace(/^\uFEFF/, "");
-        trackingConfig = JSON.parse(rawCfg);
-        console.log(`[MapServer] Loaded tracking config: ${trackingConfig.targets.length} targets`);
-    }
-} catch (e) {
-    /* ignore parse errors */
-}
-
-function saveTrackingConfig() {
-    try {
-        fs.writeFileSync(TRACKING_CONFIG_PATH, JSON.stringify(trackingConfig, null, 2));
-    } catch (e) {
-        /* ignore write errors */
-    }
-}
-
-function pushTrackingConfigToBot() {
-    const payload = { ...trackingConfig };
-    for (const [id, session] of botSessions) {
-        if (session?.client) {
-            try {
-                session.client.write(`event: tracking\ndata: ${JSON.stringify(payload)}\n\n`);
-            } catch (e) {}
-        }
-    }
-}
-
-// Ping rules (role pings per mob condition)
-const PING_RULES_PATH = path.join(__dirname, "ping_rules.json");
-let pingRules = { rules: [] };
-try {
-    if (fs.existsSync(PING_RULES_PATH)) {
-        const rawPr = fs.readFileSync(PING_RULES_PATH, "utf8").replace(/^\uFEFF/, "");
-        pingRules = JSON.parse(rawPr);
-        console.log(`[MapServer] Loaded ping rules: ${pingRules.rules.length} rules`);
-    }
-} catch (e) {
-    /* ignore parse errors */
-}
-
-function savePingRules() {
-    try {
-        fs.writeFileSync(PING_RULES_PATH, JSON.stringify(pingRules, null, 2));
-    } catch (e) {
-        /* ignore write errors */
-    }
-}
-
-function pushPingRulesToBot() {
-    for (const [id, session] of botSessions) {
-        if (session?.client) {
-            try {
-                session.client.write(`event: ping-rules\ndata: ${JSON.stringify(pingRules)}\n\n`);
-            } catch (e) {}
-        }
-    }
-}
-
-// Biome channel config (channel ID per biome for Discord Bot API)
-const BIOME_CHANNELS_PATH = path.join(__dirname, "biome_channels.json");
-let biomeChannels = { defaultChannelId: "", biomes: {} };
-try {
-    if (fs.existsSync(BIOME_CHANNELS_PATH)) {
-        const rawBc = fs.readFileSync(BIOME_CHANNELS_PATH, "utf8").replace(/^\uFEFF/, "");
-        biomeChannels = JSON.parse(rawBc);
-        console.log(`[MapServer] Loaded biome channels: ${Object.keys(biomeChannels.biomes).length} biomes`);
-    }
-} catch (e) {
-    /* ignore parse errors */
-}
-
-function saveBiomeChannels() {
-    try {
-        fs.writeFileSync(BIOME_CHANNELS_PATH, JSON.stringify(biomeChannels, null, 2));
-    } catch (e) {
-        /* ignore write errors */
-    }
-}
-
-function pushBiomeChannelsToBot() {
-    for (const [id, session] of botSessions) {
-        if (session?.client) {
-            try {
-                session.client.write(`event: biome-channels\ndata: ${JSON.stringify(biomeChannels)}\n\n`);
-            } catch (e) {}
-        }
-    }
-}
 
 // Helper: send event to all bots, or a specific bot if accountId is provided
 function _sendToBots(eventType, data, accountId) {
@@ -163,44 +61,6 @@ function _sendToBots(eventType, data, accountId) {
                 } catch (e) {}
             }
         }
-    }
-}
-
-// Broadcast "I'm here" over UDP so bot clients can detect map_server startup
-// without having to poll. Bot listens on CONTROL_DISCOVERY_PORT and opens the
-// SSE connection when it receives a hello.
-function startControlDiscovery() {
-    try {
-        controlDiscoverySocket = dgram.createSocket("udp4");
-        controlDiscoverySocket.on("error", (e) => {
-            console.log(`\x1b[33m[MapServer] Control discovery socket error: ${e.message}\x1b[0m`);
-        });
-        controlDiscoverySocket.bind(0, "127.0.0.1", () => {
-            const msg = Buffer.from(
-                JSON.stringify({
-                    type: "zorr-control-hello",
-                    url: `http://localhost:${PORT}`,
-                    pid: process.pid,
-                    ts: Date.now(),
-                })
-            );
-            const send = () => {
-                if (!controlDiscoverySocket) return;
-                try {
-                    controlDiscoverySocket.send(msg, CONTROL_DISCOVERY_PORT, "127.0.0.1");
-                } catch (e) {
-                    /* ignore send errors */
-                }
-            };
-            send();
-            controlDiscoveryInterval = setInterval(send, 3000);
-            controlDiscoveryInterval.unref();
-            console.log(
-                `\x1b[36m[MapServer] Broadcasting control discovery on UDP 127.0.0.1:${CONTROL_DISCOVERY_PORT} (every 3s)\x1b[0m`
-            );
-        });
-    } catch (e) {
-        console.log(`\x1b[33m[MapServer] Failed to start control discovery: ${e.message}\x1b[0m`);
     }
 }
 
@@ -1091,7 +951,9 @@ const server = http.createServer((req, res) => {
     res.end("Not found");
 });
 
+initStore(() => botSessions);
+
 server.listen(PORT, () => {
     console.log(`\x1b[36m[MapServer] Map viewer: http://localhost:${PORT}\x1b[0m`);
-    startControlDiscovery();
+    startControlDiscovery(PORT);
 });
