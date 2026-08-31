@@ -1546,55 +1546,57 @@ class BotSession {
             .catch(() => {});
     }
 
-    // ── Mixin method declarations (typed loosely for checkJs; replaced at runtime by Object.assign below) ──
-    /* eslint-disable no-unused-vars -- stub signatures only */
-    /** @param {...any} args */
-    _resetStuck(...args) {}
-    /** @param {...any} args */
-    _clearNavigation(...args) {}
-    /** @param {...any} args */
-    _setNavigateTarget(...args) {}
-    /** @param {...any} args */
-    _setRoute(...args) {}
-    /** @param {...any} args */
-    _advanceRouteWaypoint(...args) {}
-    /** @param {...any} args */
-    _computePath(...args) {}
-    /** @param {...any} args */
-    _recomputePathIfNavigating(...args) {}
-    /** @param {...any} args */
-    _isCellBlockedByMob(...args) {}
-    /** @param {...any} args */
-    _wallAwareMove(...args) {}
-    /** @param {...any} args */
-    _findNearestWallDir(...args) {}
-    /** @param {...any} args */
-    _navigateTick(...args) {}
-    /** @param {...any} args */
-    apLog(...args) {}
-    /** @param {...any} args */
-    apClearTimers(...args) {}
-    /** @param {...any} args */
-    apStop(...args) {}
-    /** @param {...any} args */
-    apStart(...args) {}
-    /** @param {...any} args */
-    apAdvance(...args) {}
-    /** @param {...any} args */
-    apOnLogin(...args) {}
-    /** @param {...any} args */
-    apOnSpawned(...args) {}
-    /** @param {...any} args */
-    apOnPinkyState(...args) {}
-    /** @param {...any} args */
-    apOnDeath(...args) {}
-    /** @param {...any} args */
-    apOnRouteComplete(...args) {}
-    /** @param {...any} args */
-    _generateMobMapImage(...args) {}
-    /** @param {...any} args */
-    _sendDiscordAlert(...args) {}
-    /* eslint-enable no-unused-vars */
+    /**
+     * Mixin method declarations (typed loosely for checkJs; replaced at
+     * runtime by Object.assign below).
+     * Mixed in from lib/bot modules; stubs are replaced at runtime by Object.assign.
+     */
+    /** @param {...any} _ */
+    _resetStuck(..._) {}
+    /** @param {...any} _ */
+    _clearNavigation(..._) {}
+    /** @param {...any} _ */
+    _setNavigateTarget(..._) {}
+    /** @param {...any} _ */
+    _setRoute(..._) {}
+    /** @param {...any} _ */
+    _advanceRouteWaypoint(..._) {}
+    /** @param {...any} _ */
+    _computePath(..._) {}
+    /** @param {...any} _ */
+    _recomputePathIfNavigating(..._) {}
+    /** @param {...any} _ */
+    _isCellBlockedByMob(..._) {}
+    /** @param {...any} _ */
+    _wallAwareMove(..._) {}
+    /** @param {...any} _ */
+    _findNearestWallDir(..._) {}
+    /** @param {...any} _ */
+    _navigateTick(..._) {}
+    /** @param {...any} _ */
+    apLog(..._) {}
+    /** @param {...any} _ */
+    apClearTimers(..._) {}
+    /** @param {...any} _ */
+    apStop(..._) {}
+    /** @param {...any} _ */
+    apStart(..._) {}
+    /** @param {...any} _ */
+    apAdvance(..._) {}
+    /** @param {...any} _ */
+    apOnLogin(..._) {}
+    /** @param {...any} _ */
+    apOnSpawned(..._) {}
+    /** @param {...any} _ */
+    apOnPinkyState(..._) {}
+    /** @param {...any} _ */
+    apOnDeath(..._) {}
+    /** @param {...any} _ */
+    apOnRouteComplete(..._) {}
+    /** @param {...any} _ */
+    _generateMobMapImage(..._) {}
+    /** @param {...any} _ */
+    _sendDiscordAlert(..._) {}
 }
 
 // Runtime mix-in replaces the stub declarations above.

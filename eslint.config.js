@@ -2,7 +2,13 @@ import prettierConfig from "eslint-config-prettier";
 
 export default [
     {
-        ignores: ["node_modules/", "zorr-deobfuscator/", "pathfinding/map.json", "pathfinding/*.min.js"],
+        ignores: [
+            "node_modules/",
+            "zorr-deobfuscator/",
+            "pathfinding/map.json",
+            "pathfinding/*.min.js",
+            "pathfinding/index.html",
+        ],
     },
     {
         languageOptions: {
@@ -37,6 +43,31 @@ export default [
             "no-cond-assign": "error",
             "prefer-const": "warn",
             eqeqeq: ["warn", "smart"],
+        },
+    },
+    {
+        files: ["public/**/*.js"],
+        languageOptions: {
+            sourceType: "script",
+            globals: {
+                document: "readonly",
+                window: "writable",
+                alert: "readonly",
+                EventSource: "readonly",
+            },
+        },
+        rules: {
+            // Inline onclick="" handlers reference these top-level functions,
+            // which ESLint cannot see — silence the false "never used" reports.
+            "no-unused-vars": [
+                "warn",
+                {
+                    args: "none",
+                    caughtErrors: "none",
+                    varsIgnorePattern:
+                        "^(send|toggle|open|close|start|stop|switch|render|select|save|load|delete|add|preview|play|route|init|on|apply|escapeHtml|update|clear|restore|handle|buildDistanceMap|findPathLocal)",
+                },
+            ],
         },
     },
     prettierConfig,

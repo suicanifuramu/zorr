@@ -131,6 +131,22 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // Static viewer assets (Phase 8 split: CSS/JS live in public/)
+    if (req.method === "GET" && /^\/map\.(css|js)$/.test(req.url)) {
+        const file = path.join(__dirname, "public", req.url.slice(1));
+        if (fs.existsSync(file)) {
+            res.writeHead(200, {
+                "Content-Type": req.url.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8",
+                "Cache-Control": "no-cache",
+            });
+            fs.createReadStream(file).pipe(res);
+        } else {
+            res.writeHead(404);
+            res.end("not found");
+        }
+        return;
+    }
+
     if (req.url === "/config" && req.method === "GET") {
         res.setHeader("Cache-Control", "no-store");
         if (gameConfig) {
