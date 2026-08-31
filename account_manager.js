@@ -235,12 +235,7 @@ async function main() {
         const proxyTag = entry.proxy ? ` [proxy: ${entry.proxy.url}]` : "";
         console.log(`[AccountManager] Starting session for ${accountId.slice(0, 8)}...${buildTag}${proxyTag}`);
         session.start(distributions[i]);
-        // Begin auto-patrol immediately using the assigned server distribution.
-        if (distributions[i] && distributions[i].length > 0) {
-            session.apStart();
-        } else {
-            console.log(`[AccountManager] No servers assigned to ${accountId.slice(0, 8)}, auto-patrol skipped`);
-        }
+        // Auto-patrol is started manually from the map viewer (▶ Start All / per-account ▶).
     }
 
     // Handle graceful shutdown
