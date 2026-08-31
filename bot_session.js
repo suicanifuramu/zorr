@@ -1080,20 +1080,22 @@ class BotSession {
         if (this.isSpawned && !this.isDead && (this.botX !== 0 || this.botY !== 0)) {
             const mobList = [];
             for (const [id, mob] of this.activeMobs) {
-                if (mob.x !== undefined && mob.y !== undefined) {
-                    const dist = Math.sqrt((mob.x - this.botX) ** 2 + (mob.y - this.botY) ** 2);
-                    mobList.push({
-                        id,
-                        x: mob.x,
-                        y: mob.y,
-                        name: mob.mobName || "Unknown",
-                        slug: mob.mobSlug || mob.mobName.toLowerCase().replace(/ /g, "_"),
-                        rarity: mob.rarityIndex ?? 0,
-                        variant: mob.variant ?? 0,
-                        size: mob.size || 0,
-                        dist: Math.round(dist),
-                    });
-                }
+                if (mob.x === undefined || mob.y === undefined) continue;
+                // Pets spawned from eggs (game Ts flag, yellow render) are not real
+                // mobs — exclude from Mob List and tracking notifications.
+                if (mob.isPet) continue;
+                const dist = Math.sqrt((mob.x - this.botX) ** 2 + (mob.y - this.botY) ** 2);
+                mobList.push({
+                    id,
+                    x: mob.x,
+                    y: mob.y,
+                    name: mob.mobName || "Unknown",
+                    slug: mob.mobSlug || mob.mobName.toLowerCase().replace(/ /g, "_"),
+                    rarity: mob.rarityIndex ?? 0,
+                    variant: mob.variant ?? 0,
+                    size: mob.size || 0,
+                    dist: Math.round(dist),
+                });
             }
             mobList.sort((a, b) => a.dist - b.dist);
 
@@ -1422,6 +1424,8 @@ class BotSession {
                     mobIndex: mi,
                     rarityIndex: mri,
                     variant: mobVar,
+                    // game r&2 (Ts) = yellow-rendered entity = pet spawned from an egg/pet
+                    isPet: !!(mobFl & 2),
                     lastUpdated: Date.now(),
                 });
                 break;
