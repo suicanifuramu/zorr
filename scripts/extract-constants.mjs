@@ -153,6 +153,23 @@ sandbox.globalThis = sandbox;
 vm.runInNewContext(`(function(){ ${parts.join("\n")} })();`, sandbox, { timeout: 10000 });
 const enums = sandbox.__enums;
 
+// ── status-flag bitmask (sv() function, deobf ~line 40745) ──
+// Each `t.X = !!(a & N)` line maps a semantic name to a bit. Extract programmatically so
+// PINKY_BITMASK / Third Eye etc track game updates instead of hardcoding 2048.
+function extractStatusFlags() {
+    const at = src.indexOf("function sv(t, n, e)");
+    if (at === -1) throw new Error("sv() status-flag function not found");
+    const end = balancedEnd(src.indexOf("{", at));
+    const body = src.slice(at, end);
+    const flags = {};
+    for (const m of body.matchAll(/t\.([A-Za-z0-9_$]+)\s*=\s*!!\(a & (\d+)\)/g)) {
+        flags[Number(m[2])] = m[1];
+    }
+    return flags;
+}
+const statusFlags = extractStatusFlags();
+const PINKY_BITMASK_EXTRACTED = Number(Object.keys(statusFlags).find((k) => statusFlags[k] === "_s")) || 2048;
+
 // ── build the full constants payload ──
 const out = {
     _meta: { source: path.basename(srcPath), extractedAt: new Date().toISOString() },
@@ -164,6 +181,8 @@ const out = {
     entityTypes: enums.E, // entity type ids (Entity=0, N=PLAYER=1, H=PETAL=2, R=MOB=3, ...)
     rarities: enums.I, // rarity ids (Normal=0, Magic=1, ...)
     itemEncoding: { BUILD_AX: 32 }, // az(id, rarity) = id * ay + rarity (ay=32, deobf line ~1689)
+    statusFlags, // sv(): bit → client property (1024=showThirdEye, 2048=_s[=Pinky], ...)
+    pinkyBitmask: PINKY_BITMASK_EXTRACTED, // t._s assignment inside sv()
 };
 for (const name of names) {
     const e = enums[name] || {};

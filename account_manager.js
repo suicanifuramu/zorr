@@ -42,21 +42,9 @@ async function loadGameData() {
     const rarities = gameData.rarities;
     const variants = gameData.variants || [];
 
-    // Pinky detection
-    let PINKY_BITMASK = 2048;
-    try {
-        const srcData = gameData._source;
-        if (srcData) {
-            const pinkyMatch = srcData.match(
-                /\.([a-zA-Z_$][\w$]*)\s*=\s*!!\(\s*(?:2048\s*&\s*[\w$]+|[\w$]+\s*&\s*2048)\s*\)/
-            );
-            if (pinkyMatch && pinkyMatch[1]) {
-                console.log(`[AccountManager] Pinky property: player.${pinkyMatch[1]} (bitmask 2048)`);
-            }
-        }
-    } catch (e) {
-        console.log(`[AccountManager] Pinky detection error: ${e.message}`);
-    }
+    // Pinky bit — extracted from the game's status-flag reader sv() (t._s bit)
+    const { PINKY_BITMASK } = await import("./lib/bot/constants.js");
+    console.log(`[AccountManager] Pinky bitmask: ${PINKY_BITMASK} (extracted)`);
 
     // Protocol version: derive from the same extraction used for game data
     // to avoid stale/mismatched versions between extractGameData and extractProtocolVersion.
