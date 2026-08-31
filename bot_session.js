@@ -307,6 +307,26 @@ class BotSession {
 
     switchBotServer(region, biome) {
         if (this._switching) return;
+        const newUrl = `wss://s-${region}-${biome}.zorr.pro/`;
+        // Self-switch noop: apStart's first apAdvance often targets the server we are
+        // already on. Closing a CONNECTING websocket mid-handshake and reconnecting
+        // triggers the server's invalidProtocol kick (observed on switch storms).
+        if (newUrl === this.serverUrl) {
+            console.log(`[${this.accountId.slice(0, 8)}] [Switch] Already on ${region}/${biome}, skipping`);
+            if (this._AP.active) {
+                this._AP.serverIndex++; // advance past the current server, otherwise apAdvance loops forever
+                this.apAdvance();
+            }
+            return;
+        }
+        // If a previous connection is still establishing, don't destroy it mid-handshake.
+        if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+            console.log(
+                `[${this.accountId.slice(0, 8)}] [Switch] previous connection still establishing, deferring switch`
+            );
+            setTimeout(() => this.switchBotServer(region, biome), 2000);
+            return;
+        }
         this.notifiedMobs.length = 0;
         this._switching = true;
         this._clearNavigation("switch");
@@ -345,7 +365,6 @@ class BotSession {
             clearTimeout(this._broadcastTimer);
             this._broadcastTimer = null;
         }
-        const newUrl = `wss://s-${region}-${biome}.zorr.pro/`;
         console.log(`${tag} [Switch] ${this.serverUrl} -> ${newUrl}`);
         this.serverUrl = newUrl;
         this._bumpGeneration();
@@ -363,7 +382,7 @@ class BotSession {
                 setTimeout(() => {
                     this._switching = false;
                     this.connect();
-                }, 1000);
+                }, 3000); // server needs time to drop the old session before we re-handshake
             };
             oldWs.once("close", onClosed);
             try {
