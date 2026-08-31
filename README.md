@@ -39,12 +39,36 @@ public/map.css|js       Viewer styles and logic
 npm start          # map server + viewer at http://localhost:3000
 npm run bot        # multi-account bot manager
 npm run capture    # single-account test session
-npm run extract    # dump current extraction result
+npm run extract    # dump current extraction result (game data)
+npm run extract:constants  # deobf + derive protocol constants + VM extraction (full chain)
 npm run pathfind   # pathfinding map server (port 3001)
 
-npm test           # node:test unit tests
+npm test           # node:test unit tests (incl. protocol-constant guards)
 npm run check      # lint + typecheck + format check + tests
 ```
+
+### Protocol constants (auto-extracted)
+
+All wire-protocol constants (send opcodes, kick reasons, entity types, update
+flags, status bitmask, item encoding) are **derived from the obfuscated game
+source** — no hand-maintained values:
+
+```bash
+npm run extract:constants
+```
+
+This chain: fetches the game JS → runs zorr-deobfuscator (webcrack + babel) →
+statically evaluates the game's `N()`/`R()` enum initializers in a sandbox →
+writes `generated/protocol_constants.json` (gitignored cache) → runs the
+game-data VM extraction.
+
+`lib/bot/constants.js` loads that file **fail-fast**: a missing key aborts
+startup instead of sending a wrong byte to the live server. Semantic mapping
+(which S key is SPAWN_PLAY vs EQUIP_LOADOUT etc.) is pinned in constants.js and
+guarded by `test/protocol_constants.test.js` against the last values verified
+on the live server. If the game updates and symbols shift, re-run the extract
+chain; if the deobfuscator output renames symbols, update the key list in
+`lib/bot/constants.js`.
 
 ## Config files (runtime)
 
