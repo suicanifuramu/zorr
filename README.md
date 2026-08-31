@@ -72,10 +72,10 @@ chain; if the deobfuscator output renames symbols, update the key list in
 
 ## Config files (runtime)
 
-- `routes.json` — patrol routes
-- `tracking_config.json` — mob tracking targets
-- `ping_rules.json` — Discord ping rules
-- `biome_channels.json` — Discord channel per biome
+- `config/routes.json` — patrol routes
+- `config/tracking_config.json` — mob tracking targets
+- `config/ping_rules.json` — Discord ping rules
+- `config/biome_channels.json` — Discord channel per biome
 - `.env` — DISCORD_BOT_TOKEN, DISCORD_GUILD_ID, etc.
 
 ## Development
