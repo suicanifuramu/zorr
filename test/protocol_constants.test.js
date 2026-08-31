@@ -24,6 +24,7 @@ test("wire opcodes match live-server-verified values", () => {
     // These numbers were verified against the LIVE server via run_capture (handshake+spawn OK).
     // If the game updates and they shift, the bot hard-fails at startup (lib/bot/constants.js).
     assert.strictEqual(S.qn, 2); // SPAWN_PLAY
+    assert.strictEqual(S._n, 1); // PING (1s heartbeat; tM set right before tO(S._n))
     assert.strictEqual(S.Gn, 3); // DIE_QUIT
     assert.strictEqual(S.Vn, 5); // MOVEMENT
     assert.strictEqual(S.ro, 74); // EQUIP_LOADOUT
